@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Class1.cs" />
+    <Compile Remove="InoicePrinting.cs" />
+    <Compile Remove="PDFCreation.cs" />
+    <Compile Remove="Text.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\PDFCreater\PDFCreator\PDFCreator.csproj" />
+  </ItemGroup>
+
+</Project>
