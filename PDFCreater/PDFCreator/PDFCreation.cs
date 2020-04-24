@@ -1,40 +1,82 @@
-﻿using System;
+﻿using PDfCreator.Models;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text;
 
-namespace PDfConsole
+namespace PDfCreator
 {
     public class Invoice
     {
-        private List<iHeader> _headers;
+        private ArrayList _Reportheaders;
+        private ArrayList _ReportFooters;
+        private iDetail _Detail;
+        //private string _csvData;
+        
         public iDocument Document { get; set; }
-        public List<iHeader> Headers { get { return _headers; } }
+        
+        public ArrayList ReportHeaders { get { return _Reportheaders; } }
+        public ArrayList ReportFooters { get { return _ReportFooters; } }
+        public iDetail Detail { get { return _Detail; } }
+        //public string DetailData { get { return _csvData; } }
+       
         public Invoice()
         {
-            _headers = new List<iHeader>();
+            Document = new iDocument();
+            _Reportheaders = new ArrayList();
+            _ReportFooters = new ArrayList();
+            _Detail = new iDetail();
         }
 
-        public void NewHeader()
+        public void NewTable(ArrayList parent) 
         {
-            iHeader header = new iHeader();
-            _headers.Add(header);
+
+            //var header = (T)Activator.CreateInstance(typeof(T));
+            var tbl = new iTable();
+                parent.Add(tbl);
+            
+            
 
         }
 
-        public void NewColumn(iHeader header)
+        public void NewColumn(iTable header)
         {
-            iHeaderColumn column = new iHeaderColumn();
+            iColumn column = new iColumn();
             header.Columns.Add(column);
         }
-
-        public void RemoveColumn(iHeader header,iHeaderColumn col)
+        public void NewTableColumn(iTable header)
+        {
+            iTable column = new iTable();
+            header.Columns.Add(column);
+        }
+        public void RemoveColumn(iTable header,iColumn col)
         {
             header.Columns.Remove(col);
         }
-
-        public void RemoveHeader(iHeader header)
+        public void RemoveTableColumn(iTable header, iTable col)
         {
-            Headers.Remove(header);
+            header.Columns.Remove(col);
+        }
+        public void RemoveTable(iTable table)
+        {
+            ReportHeaders.Remove(table);
+        }
+
+        public void AddDetailcsvData(string fileName)
+        {
+            Document.setDetailSource( fileName);
+        }
+        //public void AddReportcsvData( string fileName)
+        //{
+        //    Document.setReportCsvSource(fileName);
+        //}
+        public void AddSQlConfiguration(String connetionstring,string reportquery,string detailquery,string parameters)
+        {
+            Document.setSqlConnection ( connetionstring);
+            Document.setDetailSource ( detailquery);
+            Document.setReportSource ( reportquery);
+            Document.setQueryParameter(parameters);
         }
     }
 }

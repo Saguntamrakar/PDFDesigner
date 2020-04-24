@@ -11,7 +11,7 @@ namespace PDfConsole
         public Invoice()
         {
             _headers = new List<iHeader>();
-        }
+        } 
 
         public void NewHeader()
         {

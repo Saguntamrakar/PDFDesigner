@@ -1,22 +1,31 @@
 ﻿using Newtonsoft.Json;
-using PDfConsole;
+using Newtonsoft.Json.Serialization;
+using Newtonsoft.Json.Linq;
+
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Data.SqlClient;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-
+using PDfCreator;
+using System.Reflection;
+using PDfCreator.Print;
+using PDfCreator.Models;
+using Dapper;
 namespace PdfDesigner
 {
     public partial class Form1 : Form
     {
         Invoice inv;
         ContextMenuStrip myContextMenuStrip;
+        InvoicePrinting inoicePrinting;
         public Form1()
         {
             InitializeComponent();
@@ -26,60 +35,111 @@ namespace PdfDesigner
         private void Form1_Load(object sender, EventArgs e)
         {
             inv = new Invoice();
-            //inv.NewHeader();
-            //inv.NewColumn(inv.Headers[0]);
-            //inv.Headers[0].Columns[0].width = 2;
-            //inv.Headers[0].Columns[0].Text = "What is your name";
-            //inv.Headers[0].Columns[0].IsBold = true;
-            //inv.Headers[0].Columns[0].FontSize = 14;
-            //inv.Headers[0].Columns[0].NoLeftBorder = true;
-            //inv.NewColumn(inv.Headers[0]);
-            //inv.Headers[0].Columns[1].width = 5;
-            //inv.Headers[0].Columns[1].Text = "This is my name";
-            //inv.Headers[0].Columns[1].IsBold = true;
-            //inv.Headers[0].Columns[1].NoBorder = true;
-            //inv.Headers[0].Columns[1].FontSize = 7;
-            //inv.NewColumn(inv.Headers[0]);
-            //inv.Headers[0].Columns[2].width = 5;
-            //inv.Headers[0].Columns[2].Text = "This is my name";
-            //inv.Headers[0].Columns[2].IsBold = true;
-            //inv.Headers[0].Columns[2].FontSize = 14;
-            //inv.NewHeader();
-            //inv.NewColumn(inv.Headers[1]);
-            //inv.Headers[1].Columns[0].width = 2;
-            //inv.Headers[1].Columns[0].Text = "What is your name";
-            //inv.Headers[1].Columns[0].IsBold = true;
-            //inv.Headers[1].Columns[0].FontSize = 14;
-            //inv.NewColumn(inv.Headers[1]);
-            //inv.Headers[1].Columns[1].width = 5;
-            //inv.Headers[1].Columns[1].Text = "This is my name";
-            //inv.Headers[1].Columns[1].IsBold = true;
-            //inv.Headers[1].Columns[1].NoBorder = true;
-            //inv.Headers[1].Columns[1].FontSize = 14;
-            //inv.NewColumn(inv.Headers[1]);
-            //inv.Headers[1].Columns[2].width = 5;
-            //inv.Headers[1].Columns[2].Text = "This is my name";
-            //inv.Headers[1].Columns[2].IsBold = true;
-            //inv.Headers[1].Columns[2].FontSize = 14;
-            //LoadTree();
-            //LoadPdf();
+            inoicePrinting = new InvoicePrinting();
         }
         private void LoadTree()
         {
             treeView1.Nodes.Clear();
+            var doc = treeView1.Nodes.Add("Document");
+            doc.Tag = inv.Document;
+            //Report Header Section
             var headernod = treeView1.Nodes.Add("Headers");
+            headernod.Tag = inv.ReportHeaders;
             int i = 0;
-            foreach (var head in inv.Headers)
+            foreach (var head in inv.ReportHeaders)
             {
                 i++;
                 var header = headernod.Nodes.Add($"Header({i})");
                 header.Tag = head;
-                foreach (var col in head.Columns)
+                if (head.GetType().Equals(typeof(iTable)))
                 {
-                    var column = header.Nodes.Add(col.Text);
-                    column.Tag = col;
+                    foreach (var col in ((iTable)head).Columns)
+                    {
+                        LoadNode(col, header);
+                    }
+                }
+
+            }
+
+            //Report Detail Section
+            TreeNode detail = treeView1.Nodes.Add("Detail");
+            detail.Tag = inv.Detail;
+            
+            TreeNode detailHeader = detail.Nodes.Add("Detail Header");
+            detailHeader.Tag = inv.Detail.DetailHeader;
+            foreach (var col in inv.Detail.DetailHeader.Columns)
+            {
+                string colName = col.GetType().Equals(typeof(iColumn)) ? ((iColumn)col).Text : "Table";
+                var column = detailHeader.Nodes.Add(colName);
+                column.Tag = col;
+            }
+            TreeNode detailSection = detail.Nodes.Add("Data");
+            detailSection.Tag = inv.Detail.Detail;
+            string[] detailColNames = new string[] { "" };
+            if (string.IsNullOrEmpty(inv.Document.DetailFields)==false)
+            {
+                 detailColNames = inv.Document.DetailFields.Split(',');
+            }
+            int c = 0;
+            foreach (var col in inv.Detail.Detail.Columns)
+            {
+                string colName = "";
+                if (c <= detailColNames.Length)
+                {
+                    colName = detailColNames[c];
+                }
+                var colnod = detailSection.Nodes.Add(string.IsNullOrEmpty(colName)==null?"Column(" + c + ")":colName );
+                col.Text = colName;
+
+                colnod.Tag = col;
+                c++;
+            }
+            TreeNode footerSection = detail.Nodes.Add("Detail Footer");
+            footerSection.Tag = inv.Detail.DetailFooter;
+            foreach (var col in inv.Detail.DetailFooter.Columns)
+            {
+                string colName = col.GetType().Equals(typeof(iColumn)) ? ((iColumn)col).Text : "Table";
+                var column = footerSection.Nodes.Add(colName);
+                column.Tag = col;
+            }
+
+            //Report Footer Section
+            var footerernod = treeView1.Nodes.Add("Footers");
+            footerernod.Tag = inv.ReportFooters;
+            i = 0;
+            foreach (var foot in inv.ReportFooters)
+            {
+                i++;
+                var footer = footerernod.Nodes.Add($"Footer({i})");
+                footer.Tag = foot;
+                if (foot.GetType().Equals(typeof(iTable)))
+                {
+                    foreach (var col in ((iTable)foot).Columns)
+                    {
+                        LoadNode(col, footer);
+                    }
+                }
+
+            }
+        }
+
+        private void LoadNode(object col, TreeNode parentNode)
+        {
+            if (col.GetType().Equals(typeof(iColumn)))
+            {
+                var nod = parentNode.Nodes.Add(((iColumn)col).Text);
+                nod.Tag = (iColumn)col;
+            }
+            else if (col.GetType().Equals(typeof(iTable)))
+            {
+                var nod = parentNode.Nodes.Add("Table");
+                nod.Tag = col;
+                foreach (var columns in ((iTable)col).Columns)
+                {
+                    LoadNode(columns, nod);
                 }
             }
+
         }
         private void LoadPdf()
         {
@@ -87,9 +147,26 @@ namespace PdfDesigner
             {
                 string DEST = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test1.pdf");
                 FileInfo file = new FileInfo(DEST);
+                string jsonParam = "";
+                IDictionary<string,object> dictParam = new Dictionary<string,object>();
+                
+                if (string.IsNullOrEmpty(inv.Document.QueryParameter) == false)
+                {
+                    string paramString= inv.Document.QueryParameter;
+                    if(inoicePrinting.DetailData ==null  || inoicePrinting.DetailData.Count()==0)
+                    {
+                        jsonParam = OpenParameter_Dialog(paramString);
+                        var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam.ToUpper());
+                        dictParam = jobjParam.ToObject<Dictionary<string, object>>();
+                        inoicePrinting.InputParameters = dictParam;
+                        PrepareSqlReportData(inoicePrinting, inv, dictParam);
+                    }
+                    
 
-                InoicePrinting inoicePrinting = new InoicePrinting(DEST, "A4");
-                inoicePrinting.PrintInvoice(inv, DEST);
+                }
+                
+                
+                inoicePrinting.PrintInvoice(inv, DEST, jsonParam);
 
                 pdfDocumentViewer1.LoadFromFile(DEST);
             }
@@ -99,7 +176,49 @@ namespace PdfDesigner
                 MessageBox.Show(ex.Message);
             }
         }
+        private void PrepareSqlReportData(InvoicePrinting invPrint, Invoice inv, IDictionary<string,object> param)
+        {
+            var constring = inv.Document.ConnectionString;
+            var reportQuery = inv.Document.ReportSource;
+            var detailQuery = inv.Document.DetailSource;
 
+            using (SqlConnection con = new SqlConnection(constring))
+            {
+
+                IDictionary<string,object> reportData = null;
+                if (string.IsNullOrEmpty(reportQuery) == false)
+                {
+                    reportData = (IDictionary<string, object>)con.Query(reportQuery, param).FirstOrDefault();
+                    invPrint.ReportData = reportData;
+                }
+                if (string.IsNullOrEmpty(detailQuery) == false)
+                {
+                    List<IDictionary<string,object>> detailData = con.Query(detailQuery, param).Select(row=>(IDictionary<string,object>)row).ToList();
+                    invPrint.DetailData = detailData;
+                }
+
+
+            }
+        }
+
+        private string OpenParameter_Dialog(string paramString)
+        {
+            
+            ParameterDialog pmDlg = new ParameterDialog();
+            pmDlg.LoadParameters(paramString,inoicePrinting.InputParameters);
+            if (pmDlg.ShowDialog() == DialogResult.OK)
+            {
+                string jsonParam = pmDlg.jsonParam;
+                return jsonParam;
+            }
+            else
+            {
+                string[] par = paramString.Split(',');
+                string jsonParam = "{" + string.Join(",", par.Select(x => { var s = $"\"{x}:\"\""; return s; }))  +"}";
+                return jsonParam;
+            }
+            
+        }
         private void button1_Click(object sender, EventArgs e)
         {
             LoadPdf();
@@ -117,17 +236,38 @@ namespace PdfDesigner
 
         private void LoadPropertyGrid(object obj)
         {
-            propertyGrid1.SelectedObject = obj;
+            if (obj == null) return;
+            if (obj.GetType().Equals(typeof(iColumn)))
+            {
+                propertyGrid1.SelectedObject = (iColumn)obj;
+            }
+            else if (obj.GetType().Equals(typeof(iTable)))
+            {
+                propertyGrid1.SelectedObject = (iTable)obj;
+            }
+            else
+            {
+                propertyGrid1.SelectedObject = obj;
+            }
+
         }
 
         private void treeView1_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
         {
             TreeNode nod = e.Node;
             if (nod.Tag == null) { LoadPropertyGrid(null); return; }
-            if (nod.Tag.GetType().Equals(typeof(iHeaderColumn)))
+            if (nod.Tag.GetType().Equals(typeof(iColumn)))
+            {
+                LoadPropertyGrid(nod.Tag);
+                return;
+            }
+            if (nod.Tag.GetType().Equals(typeof(iDocument)) || nod.Tag.GetType().Equals(typeof(iTable)) || nod.Tag.GetType().Equals(typeof(iDetail)) || nod.Tag.GetType().Equals(typeof(iFixedColTable)))
             {
                 LoadPropertyGrid(nod.Tag);
             }
+
+
+
         }
 
         private void button1_Click_2(object sender, EventArgs e)
@@ -140,26 +280,57 @@ namespace PdfDesigner
             {
                 // Select the clicked node
                 treeView1.SelectedNode = treeView1.GetNodeAt(e.X, e.Y);
+                if (treeView1.SelectedNode == null) return;
+                if (treeView1.SelectedNode.Text == "Document")
+                {
+                    CreateContextDataMenu();
+                    treeView1.ContextMenuStrip = myContextMenuStrip;
+                    myContextMenuStrip.Show();
+                    return;
+                }
                 if (treeView1.SelectedNode.Text == "Headers")
                 {
-                    ShowContextMenuAddHeader(new string[] { "AddHeader" });
+                    CreateContextMenu();
+                    ShowContextMenuAddHeader(new string[] { "AddTable" });
                     treeView1.ContextMenuStrip = myContextMenuStrip;
                     myContextMenuStrip.Show(treeView1, e.Location);
                     return;
                 }
+                CreateContextMenu();
                 var tag = treeView1.SelectedNode.Tag;
                 if (tag != null)
                 {
-                    if (tag.GetType().Equals(typeof(iHeader)))
+                    var parentNod = treeView1.SelectedNode.Parent;
+                    var parentTag = parentNod == null ? null : parentNod.Tag;
+                    if (parentTag != null && parentTag.GetType().Equals(typeof(iTable)))
                     {
-                        ShowContextMenuAddHeader(new string[] { "AddHeaderColumn", "RemoveHeader" });
+
+                    }
+                    if (tag.GetType().Equals(typeof(iTable)))
+                    {
+                        ShowContextMenuAddHeader(new string[] { "AddCellColumn", "AddTable", "RemoveTable" });
                         myContextMenuStrip.Show(treeView1, e.Location);
                     }
-                    if (tag.GetType().Equals(typeof(iHeaderColumn)))
+                    //if (tag.GetType().Equals(typeof(iTable)) && treeView1.SelectedNode.Text == "Detail")
+                    //{
+                    //    ShowContextMenuAddHeader(new string[] { "AddCellColumn" });
+                    //    myContextMenuStrip.Show(treeView1, e.Location);
+                    //}
+                    //if (tag.GetType().Equals(typeof(iTable)) && treeView1.SelectedNode.Text == "Detail")
+                    //{
+                    //    ShowContextMenuAddHeader(new string[] { "AddCellColumn" });
+                    //    myContextMenuStrip.Show(treeView1, e.Location);
+                    //}
+                    if (tag.GetType().Equals(typeof(iColumn)))
                     {
-                        ShowContextMenuAddHeader(new string[] { "RemoveHeaderColumn" });
+                        ShowContextMenuAddHeader(new string[] { "RemoveCellColumn" });
                         myContextMenuStrip.Show(treeView1, e.Location);
                     }
+                    //if (tag.GetType().Equals(typeof(itablec)))
+                    //{
+                    //    ShowContextMenuAddHeader(new string[] { "RemoveTableColumn" });
+                    //    myContextMenuStrip.Show(treeView1, e.Location);
+                    //}
                     return;
                 }
 
@@ -169,20 +340,37 @@ namespace PdfDesigner
         void menuItem_Click(object sender, EventArgs e)
 
         {
-
+            TreeNode selectedNod = treeView1.SelectedNode;
+            var tag = selectedNod.Tag;
             ToolStripItem menuItem = (ToolStripItem)sender;
 
-            if (menuItem.Name == "AddHeader")
+            if (menuItem.Name == "AddTable")
 
             {
+                if (tag != null)
+                {
+                    if (tag.GetType().Equals(typeof(ArrayList)))
+                    {
+                        var parent = (ArrayList)tag;
+                        inv.NewTable(parent);
+                        LoadTree();
+                        return;
+                    }
+                    if (tag.GetType().Equals(typeof(iTable)))
+                    {
+                        var parent = (iTable)tag;
+                        inv.NewTable(parent.Columns);
+                        LoadTree();
+                        return;
+                    }
 
-                inv.NewHeader();
-                LoadTree();
+                }
+
 
             }
-            if (menuItem.Name == "AddHeaderColumn")
+            if (menuItem.Name == "AddCellColumn")
             {
-                iHeader header = treeView1.SelectedNode.Tag as iHeader;
+                iTable header = treeView1.SelectedNode.Tag as iTable;
                 if (header != null)
                 {
                     inv.NewColumn(header);
@@ -191,19 +379,19 @@ namespace PdfDesigner
 
 
             }
-            if (menuItem.Name == "RemoveHeader")
+            if (menuItem.Name == "RemoveTable")
             {
-                iHeader header = treeView1.SelectedNode.Tag as iHeader;
+                iTable header = treeView1.SelectedNode.Tag as iTable;
                 if (header != null)
                 {
-                    inv.RemoveHeader(header);
+                    inv.RemoveTable(header);
                     LoadTree();
                 }
             }
-            if (menuItem.Name == "RemoveHeaderColumn")
+            if (menuItem.Name == "RemoveCellColumn")
             {
-                iHeaderColumn headerColumn = treeView1.SelectedNode.Tag as iHeaderColumn;
-                iHeader header = treeView1.SelectedNode.Parent.Tag as iHeader;
+                iColumn headerColumn = treeView1.SelectedNode.Tag as iColumn;
+                iTable header = treeView1.SelectedNode.Parent.Tag as iTable;
                 if (header != null)
                 {
                     if (headerColumn != null)
@@ -215,6 +403,10 @@ namespace PdfDesigner
 
 
             }
+            //if (menuItem == "AddCsvData")
+            //{
+
+            //}
 
         }
         private void CreateContextMenu()
@@ -223,30 +415,36 @@ namespace PdfDesigner
 
             myContextMenuStrip = new ContextMenuStrip();
 
-            ToolStripMenuItem menuItem = new ToolStripMenuItem("Add Header");
+            ToolStripMenuItem menuItem = new ToolStripMenuItem("Add Table");
 
             menuItem.Click += new EventHandler(menuItem_Click);
 
-            menuItem.Name = "AddHeader";
+            menuItem.Name = "AddTable";
 
             myContextMenuStrip.Items.Add(menuItem);
-            menuItem = new ToolStripMenuItem("Add Column");
+            menuItem = new ToolStripMenuItem("Add Cell");
 
             menuItem.Click += new EventHandler(menuItem_Click);
 
-            menuItem.Name = "AddHeaderColumn";
+            menuItem.Name = "AddCellColumn";
             myContextMenuStrip.Items.Add(menuItem);
-            menuItem = new ToolStripMenuItem("Remove Header");
+            menuItem = new ToolStripMenuItem("Remove Table");
 
             menuItem.Click += new EventHandler(menuItem_Click);
 
-            menuItem.Name = "RemoveHeader";
+            menuItem.Name = "RemoveTable";
             myContextMenuStrip.Items.Add(menuItem);
             menuItem = new ToolStripMenuItem("Remove Column");
 
             menuItem.Click += new EventHandler(menuItem_Click);
 
-            menuItem.Name = "RemoveHeaderColumn";
+            menuItem.Name = "RemoveCellColumn";
+            myContextMenuStrip.Items.Add(menuItem);
+            menuItem = new ToolStripMenuItem("Refresh");
+
+            menuItem.Click += new EventHandler(menuItem_Click);
+
+            menuItem.Name = "Refresh";
             myContextMenuStrip.Items.Add(menuItem);
             //this.ContextMenuStrip = myContextMenuStrip;
 
@@ -269,26 +467,70 @@ namespace PdfDesigner
 
 
         }
-        private void CreateContextRemoveHeaderColumn()
+        private void CreateContextDataMenu()
 
         {
 
             myContextMenuStrip = new ContextMenuStrip();
 
-            ToolStripMenuItem menuItem = new ToolStripMenuItem("Remove Column");
+            ToolStripMenuItem menuItem = new ToolStripMenuItem("Add Data Source");
 
-            menuItem.Click += new EventHandler(menuItem_Click);
+            menuItem.Click += new EventHandler(dataMenuItem_Click);
 
-            menuItem.Name = "RemoveHeaderColumn";
+            menuItem.Name = "AddDataSource";
             myContextMenuStrip.Items.Add(menuItem);
-            this.ContextMenuStrip = myContextMenuStrip;
+            menuItem = new ToolStripMenuItem("Add Parameters");
 
+            menuItem.Click += new EventHandler(dataMenuItem_Click);
+
+            menuItem.Name = "AddParameters";
+            myContextMenuStrip.Items.Add(menuItem);
+
+            menuItem = new ToolStripMenuItem("Refresh Tree");
+
+            menuItem.Click += new EventHandler(dataMenuItem_Click);
+
+            menuItem.Name = "Refresh";
+            myContextMenuStrip.Items.Add(menuItem);
         }
+
+        private void dataMenuItem_Click(object sender, EventArgs e)
+        {
+            ToolStripItem menuItem = (ToolStripItem)sender;
+
+            if (menuItem.Name == "AddDataSource")
+
+            {
+                if (inv.Document.DetailDataType == DataType.csv)
+                {
+                    Open_DetailCsvClick(true);
+                }
+                else
+                {
+                    Open_SqlConnectionDialog();
+                }
+                return;
+            }
+            if (menuItem.Name == "AddParameters")
+            {
+                var jsonParam=OpenParameter_Dialog(inv.Document.QueryParameter);
+                var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam.ToUpper());
+                var dictParam = jobjParam.ToObject<Dictionary<string, object>>();
+                inoicePrinting.InputParameters = dictParam;
+                PrepareSqlReportData(inoicePrinting, inv, dictParam);
+                return;
+            }
+            if (menuItem.Name == "Refresh")
+            {
+                LoadTree();
+            }
+        }
+
         private void propertyGrid1_PropertyValueChanged(object s, PropertyValueChangedEventArgs e)
         {
             //iHeaderColumn col = s as iHeaderColumn;
             if (treeView1.SelectedNode == null) return;
-            iHeaderColumn tag = treeView1.SelectedNode.Tag as iHeaderColumn;
+            iColumn tag = treeView1.SelectedNode.Tag as iColumn;
             if (tag != null)
             {
                 treeView1.SelectedNode.Text = tag.Text;
@@ -304,6 +546,16 @@ namespace PdfDesigner
             {
                 try
                 {
+
+                    //var jsonResolver = new PropertyRenameAndIgnoreSerializerContractResolver();
+                    ////jsonResolver.IgnoreProperty(typeof(Invoice), "Title");
+                    //jsonResolver.RenameProperty(typeof(Invoice), "DetailSource", "DetailCsvSource");
+
+                    //var serializerSettings = new JsonSerializerSettings();
+
+                    //serializerSettings.ContractResolver = jsonResolver;
+
+                    //var json = JsonConvert.SerializeObject(person, serializerSettings);
                     var json = JsonConvert.SerializeObject(inv);
                     var filename = saveFileDialog1.FileName;
                     File.WriteAllText(filename, json);
@@ -325,9 +577,11 @@ namespace PdfDesigner
                 {
                     var filename = openFileDialog1.FileName;
                     string str = File.ReadAllText(filename);
-                    var json = JsonConvert.DeserializeObject<Invoice>(str);
-                    if (json == null) throw new Exception("File format is not correct. It cannot be open");
-                    inv = json;
+
+
+
+                    inoicePrinting = new InvoicePrinting();
+                    inv = inoicePrinting.LoadInvFromJson(str);
                     LoadTree();
                     LoadPdf();
                 }
@@ -336,6 +590,129 @@ namespace PdfDesigner
                     MessageBox.Show(ex.Message);
                 }
             }
+        }
+
+        private void New_Click(object sender, EventArgs e)
+        {
+            inv = new Invoice();
+            LoadTree();
+            pdfDocumentViewer1.CloseDocument();
+
+        }
+
+        private void Open_DetailCsvClick(bool isDetail)
+        {
+            openFileDialog1.Filter = "Csv Fils|*.csv";
+            openFileDialog1.Title = "Open csv Data File";
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    var filename = openFileDialog1.FileName;
+
+                    if (isDetail == true)
+                    {
+                        inv.AddDetailcsvData(filename);
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+        }
+
+        private void Open_SqlConnectionDialog()
+        {
+            SqlConnectionDialog dlg = new SqlConnectionDialog();
+            dlg.ConnectionString = inv.Document.ConnectionString;
+            dlg.DetailQuery = inv.Document.DetailSource;
+            dlg.ReportQuery = inv.Document.ReportSource;
+            dlg.Parameter = inv.Document.QueryParameter;
+            if (dlg.ShowDialog() == DialogResult.OK)
+            {
+                var constring = dlg.ConnectionString;
+                var detailQuery = dlg.DetailQuery;
+                var reportQuery = dlg.ReportQuery;
+                var parameter = dlg.Parameter;
+                inv.Document.setDetailSource (detailQuery);
+                inv.Document.setSqlConnection(constring);
+                inv.Document.setReportSource(reportQuery);
+                inv.Document.setQueryParameter(parameter);
+
+            }
+           
+
+
+        }
+
+        
+    }
+
+    public class PropertyRenameAndIgnoreSerializerContractResolver : DefaultContractResolver
+    {
+        private readonly Dictionary<Type, HashSet<string>> _ignores;
+        private readonly Dictionary<Type, Dictionary<string, string>> _renames;
+
+        public PropertyRenameAndIgnoreSerializerContractResolver()
+        {
+            _ignores = new Dictionary<Type, HashSet<string>>();
+            _renames = new Dictionary<Type, Dictionary<string, string>>();
+        }
+
+        public void IgnoreProperty(Type type, params string[] jsonPropertyNames)
+        {
+            if (!_ignores.ContainsKey(type))
+                _ignores[type] = new HashSet<string>();
+
+            foreach (var prop in jsonPropertyNames)
+                _ignores[type].Add(prop);
+        }
+
+        public void RenameProperty(Type type, string propertyName, string newJsonPropertyName)
+        {
+            if (!_renames.ContainsKey(type))
+                _renames[type] = new Dictionary<string, string>();
+
+            _renames[type][propertyName] = newJsonPropertyName;
+        }
+
+        protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+        {
+            var property = base.CreateProperty(member, memberSerialization);
+
+            if (IsIgnored(property.DeclaringType, property.PropertyName))
+            {
+                property.ShouldSerialize = i => false;
+                property.Ignored = true;
+            }
+
+            if (IsRenamed(property.DeclaringType, property.PropertyName, out var newJsonPropertyName))
+                property.PropertyName = newJsonPropertyName;
+
+            return property;
+        }
+
+        private bool IsIgnored(Type type, string jsonPropertyName)
+        {
+            if (!_ignores.ContainsKey(type))
+                return false;
+
+            return _ignores[type].Contains(jsonPropertyName);
+        }
+
+        private bool IsRenamed(Type type, string jsonPropertyName, out string newJsonPropertyName)
+        {
+            Dictionary<string, string> renames;
+
+            if (!_renames.TryGetValue(type, out renames) || !renames.TryGetValue(jsonPropertyName, out newJsonPropertyName))
+            {
+                newJsonPropertyName = null;
+                return false;
+            }
+
+            return true;
         }
     }
 }
