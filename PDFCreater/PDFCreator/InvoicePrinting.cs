@@ -34,25 +34,40 @@ namespace PDfCreator.Print
         public IDictionary<string, object> InputParameters { get; set; }
         private int FixedRows;
         private bool IsLastPage;
-
-        public InvoicePrinting()
+        private bool IsInMemomory;
+        public InvoicePrinting(bool isinMemory=false)
         {
 
-
+            IsInMemomory = isinMemory;
 
             // Initialize document
 
             font = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
             bold = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
         }
-        public void PrintInvoice(Invoice invoice, string filename, string inputJsonParameter = "")
+        public void PrintInvoice(Invoice invoice, string filename, MemoryStream memStream = null)
         {
+            if (memStream != null) IsInMemomory = true;
+            //memStream = new MemoryStream();
+
             try
             {
 
                 ps = GetPaperSize(invoice.Document.PaperSize, invoice.Document.CustomSize);
                 dest = filename;
-                pdf = new PdfDocument(new PdfWriter(dest));
+                PdfWriter pdfWriter;
+                if (IsInMemomory == true)
+                {
+                    
+                    pdfWriter = new PdfWriter(memStream);
+                    
+                }
+                else
+                {
+                     pdfWriter = new PdfWriter(dest);
+                }
+                
+                pdf = new PdfDocument(pdfWriter);
                 if (invoice.Document.Oreintation == iOreintation.Landscape)
                 {
                     document = new Document(pdf, ps.Rotate());
@@ -107,7 +122,7 @@ namespace PDfCreator.Print
                     CreatePDF(invoice, 0);
                 }
 
-
+                
             }
             catch (Exception ex)
             {
@@ -117,6 +132,7 @@ namespace PDfCreator.Print
             finally
             {
                 document.Close();
+                
             }
         }
         //public Stream GetMemoryOfInvoice(Invoice invoice)

@@ -176,10 +176,17 @@ namespace PdfDesigner
 
                 }
 
+                using(MemoryStream memoryStream = new MemoryStream())
+                {
+                    inoicePrinting.PrintInvoice(inv, DEST,memoryStream);
 
-                inoicePrinting.PrintInvoice(inv, DEST, jsonParam);
+                    Stream stream = new MemoryStream(memoryStream.ToArray());
+                    pdfDocumentViewer1.LoadFromStream(stream);
+                    //pdfDocumentViewer1.LoadFromFile(DEST);
+                }
+                
 
-                pdfDocumentViewer1.LoadFromFile(DEST);
+               
             }
             catch (Exception ex)
             {
