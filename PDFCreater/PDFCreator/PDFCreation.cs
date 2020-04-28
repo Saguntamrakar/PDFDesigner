@@ -29,38 +29,52 @@ namespace PDfCreator
             _Detail = new iDetail();
         }
 
-        public void NewTable(ArrayList parent) 
+        public iTable NewTable(ArrayList parent) 
         {
 
             //var header = (T)Activator.CreateInstance(typeof(T));
             var tbl = new iTable();
                 parent.Add(tbl);
-            
+            return tbl;
             
 
         }
 
-        public void NewColumn(iTable header)
+        public iColumn  NewColumn(iTable header)
         {
             iColumn column = new iColumn();
+            column.Text = "New Column";
             header.Columns.Add(column);
+            return  column;
         }
         public void NewTableColumn(iTable header)
         {
             iTable column = new iTable();
             header.Columns.Add(column);
         }
-        public void RemoveColumn(iTable header,iColumn col)
+        public bool RemoveColumn(iTable header,iColumn col)
         {
+            var colCount = header.Columns.Count;
             header.Columns.Remove(col);
+            if (header.Columns.Count == colCount - 1) return true;
+            return false;
         }
         public void RemoveTableColumn(iTable header, iTable col)
         {
             header.Columns.Remove(col);
         }
-        public void RemoveTable(iTable table)
+        public bool  RemoveTable(iTable table,object obj)
         {
-            ReportHeaders.Remove(table);
+            if (obj.GetType().Equals(typeof(ArrayList)))
+            {
+                ArrayList lst = obj as ArrayList;
+                var lstCount = lst.Count;
+                lst.Remove(table);
+                if(lst.Count == (lstCount - 1)){
+                    return true;
+                }
+            }
+            return false;
         }
 
         public void AddDetailcsvData(string fileName)
@@ -77,6 +91,21 @@ namespace PDfCreator
             Document.setDetailSource ( detailquery);
             Document.setReportSource ( reportquery);
             Document.setQueryParameter(parameters);
+        }
+        public Invoice DeepCopy()
+        {
+            Invoice inv = (Invoice)this.MemberwiseClone();
+            return inv;
+        }
+
+        public void SetReportHeaders(ArrayList rptHeaders)
+        {
+            _Reportheaders = rptHeaders;
+        }
+
+        public void SetReportFooters(ArrayList rptFooters)
+        {
+            _ReportFooters = rptFooters;
         }
     }
 }

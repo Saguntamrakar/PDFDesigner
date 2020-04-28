@@ -25,6 +25,7 @@ namespace PdfDesigner
         }
         public void  LoadParameters(string paramString,IDictionary<string,object> parameters)
         {
+            if (string.IsNullOrEmpty(paramString) == true) return;
             param = paramString.Split(',');
             int pointX = 30;
             int pointY = 40;

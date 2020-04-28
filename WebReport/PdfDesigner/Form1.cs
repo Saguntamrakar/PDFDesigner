@@ -64,7 +64,7 @@ namespace PdfDesigner
             //Report Detail Section
             TreeNode detail = treeView1.Nodes.Add("Detail");
             detail.Tag = inv.Detail;
-            
+
             TreeNode detailHeader = detail.Nodes.Add("Detail Header");
             detailHeader.Tag = inv.Detail.DetailHeader;
             foreach (var col in inv.Detail.DetailHeader.Columns)
@@ -76,24 +76,28 @@ namespace PdfDesigner
             TreeNode detailSection = detail.Nodes.Add("Data");
             detailSection.Tag = inv.Detail.Detail;
             string[] detailColNames = new string[] { "" };
-            if (string.IsNullOrEmpty(inv.Document.DetailFields)==false)
+            if (string.IsNullOrEmpty(inv.Document.DetailFields) == false)
             {
-                 detailColNames = inv.Document.DetailFields.Split(',');
+                detailColNames = inv.Document.DetailFields.Split(',');
             }
             int c = 0;
-            foreach (var col in inv.Detail.Detail.Columns)
+            if (inv.Detail.Detail != null)
             {
-                string colName = "";
-                if (c <= detailColNames.Length)
+                foreach (iColumn col in inv.Detail.Detail.Columns)
                 {
-                    colName = detailColNames[c];
-                }
-                var colnod = detailSection.Nodes.Add(string.IsNullOrEmpty(colName)==null?"Column(" + c + ")":colName );
-                col.Text = colName;
+                    string colName = "";
+                    if (c < detailColNames.Length)
+                    {
+                        colName = detailColNames[c];
+                    }
+                    var colnod = detailSection.Nodes.Add(string.IsNullOrEmpty(colName) == null ? "Column(" + c + ")" : colName);
+                    col.Text = colName;
 
-                colnod.Tag = col;
-                c++;
+                    colnod.Tag = col;
+                    c++;
+                }
             }
+
             TreeNode footerSection = detail.Nodes.Add("Detail Footer");
             footerSection.Tag = inv.Detail.DetailFooter;
             foreach (var col in inv.Detail.DetailFooter.Columns)
@@ -141,19 +145,26 @@ namespace PdfDesigner
             }
 
         }
-        private void LoadPdf()
+        private void LoadPdf(string ExportFileName = "")
         {
             try
             {
                 string DEST = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test1.pdf");
+                if (string.IsNullOrEmpty(ExportFileName))
+                {
+                    if (Directory.Exists(ExportFileName) == true)
+                    {
+                        DEST = ExportFileName;
+                    }
+                }
                 FileInfo file = new FileInfo(DEST);
                 string jsonParam = "";
-                IDictionary<string,object> dictParam = new Dictionary<string,object>();
-                
+                IDictionary<string, object> dictParam = new Dictionary<string, object>();
+
                 if (string.IsNullOrEmpty(inv.Document.QueryParameter) == false)
                 {
-                    string paramString= inv.Document.QueryParameter;
-                    if(inoicePrinting.DetailData ==null  || inoicePrinting.DetailData.Count()==0)
+                    string paramString = inv.Document.QueryParameter;
+                    if (inoicePrinting.DetailData == null || inoicePrinting.DetailData.Count() == 0)
                     {
                         jsonParam = OpenParameter_Dialog(paramString);
                         var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam.ToUpper());
@@ -161,11 +172,11 @@ namespace PdfDesigner
                         inoicePrinting.InputParameters = dictParam;
                         PrepareSqlReportData(inoicePrinting, inv, dictParam);
                     }
-                    
+
 
                 }
-                
-                
+
+
                 inoicePrinting.PrintInvoice(inv, DEST, jsonParam);
 
                 pdfDocumentViewer1.LoadFromFile(DEST);
@@ -176,7 +187,7 @@ namespace PdfDesigner
                 MessageBox.Show(ex.Message);
             }
         }
-        private void PrepareSqlReportData(InvoicePrinting invPrint, Invoice inv, IDictionary<string,object> param)
+        private void PrepareSqlReportData(InvoicePrinting invPrint, Invoice inv, IDictionary<string, object> param)
         {
             var constring = inv.Document.ConnectionString;
             var reportQuery = inv.Document.ReportSource;
@@ -185,7 +196,7 @@ namespace PdfDesigner
             using (SqlConnection con = new SqlConnection(constring))
             {
 
-                IDictionary<string,object> reportData = null;
+                IDictionary<string, object> reportData = null;
                 if (string.IsNullOrEmpty(reportQuery) == false)
                 {
                     reportData = (IDictionary<string, object>)con.Query(reportQuery, param).FirstOrDefault();
@@ -193,7 +204,7 @@ namespace PdfDesigner
                 }
                 if (string.IsNullOrEmpty(detailQuery) == false)
                 {
-                    List<IDictionary<string,object>> detailData = con.Query(detailQuery, param).Select(row=>(IDictionary<string,object>)row).ToList();
+                    List<IDictionary<string, object>> detailData = con.Query(detailQuery, param).Select(row => (IDictionary<string, object>)row).ToList();
                     invPrint.DetailData = detailData;
                 }
 
@@ -203,21 +214,30 @@ namespace PdfDesigner
 
         private string OpenParameter_Dialog(string paramString)
         {
-            
-            ParameterDialog pmDlg = new ParameterDialog();
-            pmDlg.LoadParameters(paramString,inoicePrinting.InputParameters);
-            if (pmDlg.ShowDialog() == DialogResult.OK)
+            if (string.IsNullOrEmpty(paramString)) return "";
+            try
             {
-                string jsonParam = pmDlg.jsonParam;
-                return jsonParam;
+                ParameterDialog pmDlg = new ParameterDialog();
+                pmDlg.LoadParameters(paramString, inoicePrinting.InputParameters);
+                if (pmDlg.ShowDialog() == DialogResult.OK)
+                {
+                    string jsonParam = pmDlg.jsonParam;
+                    return jsonParam;
+                }
+                return "";
+                //else
+                //{
+                //    string[] par = paramString.Split(',');
+                //    string jsonParam = "{" + string.Join(",", par.Select(x => { var s = $"\"{x}:\"\""; return s; })) + "}";
+                //    return jsonParam;
+                //}
             }
-            else
+            catch (Exception)
             {
-                string[] par = paramString.Split(',');
-                string jsonParam = "{" + string.Join(",", par.Select(x => { var s = $"\"{x}:\"\""; return s; }))  +"}";
-                return jsonParam;
+
+                throw;
             }
-            
+
         }
         private void button1_Click(object sender, EventArgs e)
         {
@@ -288,10 +308,10 @@ namespace PdfDesigner
                     myContextMenuStrip.Show();
                     return;
                 }
-                if (treeView1.SelectedNode.Text == "Headers")
+                if (treeView1.SelectedNode.Text == "Headers" || treeView1.SelectedNode.Text == "Footers")
                 {
                     CreateContextMenu();
-                    ShowContextMenuAddHeader(new string[] { "AddTable" });
+                    ShowContextMenuAddHeader(new string[] { "AddTable", "AddCellColumn" });
                     treeView1.ContextMenuStrip = myContextMenuStrip;
                     myContextMenuStrip.Show(treeView1, e.Location);
                     return;
@@ -308,7 +328,14 @@ namespace PdfDesigner
                     }
                     if (tag.GetType().Equals(typeof(iTable)))
                     {
-                        ShowContextMenuAddHeader(new string[] { "AddCellColumn", "AddTable", "RemoveTable" });
+                        if (treeView1.SelectedNode.Text == "Data" || treeView1.SelectedNode.Text=="Detail Header" || treeView1.SelectedNode.Text == "Detail Footer")
+                        {
+                            ShowContextMenuAddHeader(new string[] { "AddCellColumn" });
+                        }
+                        else
+                        {
+                            ShowContextMenuAddHeader(new string[] { "AddCellColumn", "AddTable", "RemoveTable" });
+                        }
                         myContextMenuStrip.Show(treeView1, e.Location);
                     }
                     //if (tag.GetType().Equals(typeof(iTable)) && treeView1.SelectedNode.Text == "Detail")
@@ -352,15 +379,23 @@ namespace PdfDesigner
                     if (tag.GetType().Equals(typeof(ArrayList)))
                     {
                         var parent = (ArrayList)tag;
-                        inv.NewTable(parent);
-                        LoadTree();
+                        var newtable = inv.NewTable(parent);
+                        var newnod = selectedNod.Nodes.Add("Table");
+                        newnod.Tag = newtable;
+                        treeView1.SelectedNode = newnod;
+                        newnod.EnsureVisible();
+                        treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
                         return;
                     }
                     if (tag.GetType().Equals(typeof(iTable)))
                     {
                         var parent = (iTable)tag;
-                        inv.NewTable(parent.Columns);
-                        LoadTree();
+                        var newtable = inv.NewTable(parent.Columns);
+                        var newnod = selectedNod.Nodes.Add("Table");
+                        newnod.Tag = newtable;
+                        treeView1.SelectedNode = newnod;
+                        newnod.EnsureVisible();
+                        treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
                         return;
                     }
 
@@ -373,31 +408,60 @@ namespace PdfDesigner
                 iTable header = treeView1.SelectedNode.Tag as iTable;
                 if (header != null)
                 {
-                    inv.NewColumn(header);
-                    LoadTree();
+                    var col = inv.NewColumn(header);
+                    var newnod = selectedNod.Nodes.Add(col.Text);
+                    newnod.Tag = col;
+                    treeView1.SelectedNode = newnod;
+                    newnod.EnsureVisible();
+                    treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
+                    //LoadTree();
                 }
 
 
             }
             if (menuItem.Name == "RemoveTable")
             {
-                iTable header = treeView1.SelectedNode.Tag as iTable;
+                var currenNod = treeView1.SelectedNode;
+                iTable header = currenNod.Tag as iTable;
+                var parentNod = currenNod.Parent;
+                var parent = parentNod.Tag;
                 if (header != null)
                 {
-                    inv.RemoveTable(header);
-                    LoadTree();
+                    if (parent.GetType().Equals(typeof(iTable)))
+                    {
+                        if (inv.RemoveTable(header, ((iTable)parent).Columns) == true)
+                        {
+                            currenNod.Remove();
+                        }
+                    }
+                    else
+                    {
+                        if (inv.RemoveTable(header, parent) == true)
+                        {
+                            currenNod.Remove();
+                        }
+                    }
+
+                    //LoadTree();
                 }
             }
             if (menuItem.Name == "RemoveCellColumn")
             {
-                iColumn headerColumn = treeView1.SelectedNode.Tag as iColumn;
-                iTable header = treeView1.SelectedNode.Parent.Tag as iTable;
+                var currenNod = treeView1.SelectedNode;
+                iColumn headerColumn = currenNod.Tag as iColumn;
+                iTable header = currenNod.Parent.Tag as iTable;
                 if (header != null)
                 {
                     if (headerColumn != null)
                     {
-                        inv.RemoveColumn(header, headerColumn);
-                        LoadTree();
+                        if (inv.RemoveColumn(header, headerColumn) == true)
+                        {
+                            currenNod.Remove();
+                            var newnod = treeView1.SelectedNode;
+                            treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
+                            //LoadTree();
+                        }
+
                     }
                 }
 
@@ -513,7 +577,8 @@ namespace PdfDesigner
             }
             if (menuItem.Name == "AddParameters")
             {
-                var jsonParam=OpenParameter_Dialog(inv.Document.QueryParameter);
+                var jsonParam = OpenParameter_Dialog(inv.Document.QueryParameter);
+                if (jsonParam == "") return;
                 var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam.ToUpper());
                 var dictParam = jobjParam.ToObject<Dictionary<string, object>>();
                 inoicePrinting.InputParameters = dictParam;
@@ -636,18 +701,33 @@ namespace PdfDesigner
                 var detailQuery = dlg.DetailQuery;
                 var reportQuery = dlg.ReportQuery;
                 var parameter = dlg.Parameter;
-                inv.Document.setDetailSource (detailQuery);
+                inv.Document.setDetailSource(detailQuery);
                 inv.Document.setSqlConnection(constring);
                 inv.Document.setReportSource(reportQuery);
                 inv.Document.setQueryParameter(parameter);
 
             }
-           
+
 
 
         }
 
-        
+        private void Export_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                saveFileDialog1.Filter = "pdf|*.pdf";
+                if (saveFileDialog1.ShowDialog() == DialogResult.OK)
+                {
+                    inoicePrinting.PrintInvoice(inv, saveFileDialog1.FileName);
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
     }
 
     public class PropertyRenameAndIgnoreSerializerContractResolver : DefaultContractResolver

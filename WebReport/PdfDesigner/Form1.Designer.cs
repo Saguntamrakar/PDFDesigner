@@ -34,13 +34,14 @@
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.propertyGrid1 = new System.Windows.Forms.PropertyGrid();
             this.splitContainer3 = new System.Windows.Forms.SplitContainer();
+            this.button1 = new System.Windows.Forms.Button();
             this.Open = new System.Windows.Forms.Button();
             this.Save = new System.Windows.Forms.Button();
             this.load = new System.Windows.Forms.Button();
             this.pdfDocumentViewer1 = new Spire.PdfViewer.Forms.PdfDocumentViewer();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
-            this.button1 = new System.Windows.Forms.Button();
+            this.button2 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -129,6 +130,7 @@
             // 
             // splitContainer3.Panel1
             // 
+            this.splitContainer3.Panel1.Controls.Add(this.button2);
             this.splitContainer3.Panel1.Controls.Add(this.button1);
             this.splitContainer3.Panel1.Controls.Add(this.Open);
             this.splitContainer3.Panel1.Controls.Add(this.Save);
@@ -141,11 +143,21 @@
             this.splitContainer3.SplitterDistance = 66;
             this.splitContainer3.TabIndex = 0;
             // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(335, 12);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(86, 34);
+            this.button1.TabIndex = 5;
+            this.button1.Text = "New";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.New_Click);
+            // 
             // Open
             // 
-            this.Open.Location = new System.Drawing.Point(236, 17);
+            this.Open.Location = new System.Drawing.Point(236, 11);
             this.Open.Name = "Open";
-            this.Open.Size = new System.Drawing.Size(74, 30);
+            this.Open.Size = new System.Drawing.Size(93, 35);
             this.Open.TabIndex = 4;
             this.Open.Text = "Open";
             this.Open.UseVisualStyleBackColor = true;
@@ -153,9 +165,9 @@
             // 
             // Save
             // 
-            this.Save.Location = new System.Drawing.Point(127, 13);
+            this.Save.Location = new System.Drawing.Point(127, 11);
             this.Save.Name = "Save";
-            this.Save.Size = new System.Drawing.Size(85, 34);
+            this.Save.Size = new System.Drawing.Size(103, 36);
             this.Save.TabIndex = 3;
             this.Save.Text = "Save";
             this.Save.UseVisualStyleBackColor = true;
@@ -165,7 +177,7 @@
             // 
             this.load.Location = new System.Drawing.Point(12, 11);
             this.load.Name = "load";
-            this.load.Size = new System.Drawing.Size(78, 37);
+            this.load.Size = new System.Drawing.Size(109, 37);
             this.load.TabIndex = 2;
             this.load.Text = "Refresh";
             this.load.UseVisualStyleBackColor = true;
@@ -188,15 +200,15 @@
             // 
             this.openFileDialog1.FileName = "openFileDialog1";
             // 
-            // button1
+            // button2
             // 
-            this.button1.Location = new System.Drawing.Point(344, 14);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(80, 32);
-            this.button1.TabIndex = 5;
-            this.button1.Text = "button1";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.New_Click);
+            this.button2.Location = new System.Drawing.Point(427, 14);
+            this.button2.Name = "button2";
+            this.button2.Size = new System.Drawing.Size(86, 34);
+            this.button2.TabIndex = 6;
+            this.button2.Text = "Export";
+            this.button2.UseVisualStyleBackColor = true;
+            this.button2.Click += new System.EventHandler(this.Export_Click);
             // 
             // Form1
             // 
@@ -237,6 +249,7 @@
         private System.Windows.Forms.Button Open;
         private System.Windows.Forms.SaveFileDialog saveFileDialog1;
         private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button button2;
     }
 }
 

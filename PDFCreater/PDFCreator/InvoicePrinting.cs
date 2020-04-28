@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using PDfCreator.Models;
+using PDfCreator.Helper;
 using System.Data.SqlClient;
 using Dapper;
 using System.Dynamic;
@@ -28,10 +29,12 @@ namespace PDfCreator.Print
         private PdfFont bold;
         string dest = "E:/invoce.pdf";
         private string _InputParameter;
-        public List<IDictionary<string,object>> DetailData { get; set; }
-        public IDictionary<string,object> ReportData { get; set; }
-        public IDictionary<string,object> InputParameters { get; set; }
+        public List<IDictionary<string, object>> DetailData { get; set; }
+        public IDictionary<string, object> ReportData { get; set; }
+        public IDictionary<string, object> InputParameters { get; set; }
         private int FixedRows;
+        private bool IsLastPage;
+
         public InvoicePrinting()
         {
 
@@ -42,11 +45,11 @@ namespace PDfCreator.Print
             font = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
             bold = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
         }
-        public void PrintInvoice(Invoice invoice, string filename,string inputJsonParameter="")
+        public void PrintInvoice(Invoice invoice, string filename, string inputJsonParameter = "")
         {
             try
             {
-                
+
                 ps = GetPaperSize(invoice.Document.PaperSize, invoice.Document.CustomSize);
                 dest = filename;
                 pdf = new PdfDocument(new PdfWriter(dest));
@@ -60,40 +63,55 @@ namespace PDfCreator.Print
                 }
                 if (string.IsNullOrEmpty(invoice.Document.Margin) == true) invoice.Document.Margin = "0,0,0,0";
                 string[] strMargins = invoice.Document.Margin.Split(',');
-                float leftMargin =0; float topMargin=0; float rightMargin=0; float bottomMargin=0;
-                float.TryParse(strMargins[0], out  leftMargin);
-                if(strMargins.Length>1) float.TryParse(strMargins[1], out  topMargin);
-                if(strMargins.Length>2)float.TryParse(strMargins[2], out  rightMargin);
-                if(strMargins.Length>3) float.TryParse(strMargins[3], out  bottomMargin);
+                float leftMargin = 0; float topMargin = 0; float rightMargin = 0; float bottomMargin = 0;
+                float.TryParse(strMargins[0], out leftMargin);
+                if (strMargins.Length > 1) float.TryParse(strMargins[1], out topMargin);
+                if (strMargins.Length > 2) float.TryParse(strMargins[2], out rightMargin);
+                if (strMargins.Length > 3) float.TryParse(strMargins[3], out bottomMargin);
                 document.SetTopMargin(topMargin);
                 document.SetBottomMargin(bottomMargin);
                 document.SetLeftMargin(leftMargin);
                 document.SetRightMargin(rightMargin);
-                FixedRows = invoice.Detail.Detail.FixedRows;
-                if(FixedRows > 0)
+                if (invoice.Detail.Detail != null)
+                {
+                    FixedRows = invoice.Detail.FixedRows;
+                }
+
+                IsLastPage = true;
+                if (FixedRows > 0 && DetailData != null && DetailData.Count() > 0)
                 {
                     int startRow = 0;
+
+
+
                     while (startRow < DetailData.Count())
                     {
+                        IsLastPage = false;
+                        if (startRow >= DetailData.Count() - 1)
+                        {
+                            IsLastPage = true;
+                        }
                         CreatePDF(invoice, startRow);
                         startRow = startRow + FixedRows;
-                        if(startRow < DetailData.Count())
+                        if (startRow < DetailData.Count())
                         {
                             document.Add(new AreaBreak());
+
                         }
-                        
+
+
                     }
                 }
                 else
                 {
                     CreatePDF(invoice, 0);
                 }
-                
-                
+
+
             }
             catch (Exception ex)
             {
-                document.Close();
+                //document.Close();
                 throw ex;
             }
             finally
@@ -110,7 +128,7 @@ namespace PDfCreator.Print
         //    CreatePDF(invoice);
         //    return memStream;
         //}
-        public void CreatePDF(Invoice invoice,int startrow)
+        public void CreatePDF(Invoice invoice, int startrow)
         {
             try
             {
@@ -131,13 +149,13 @@ namespace PDfCreator.Print
                             cols = header.Columns.ToArray().Select(x => { float i = 1; return i; }).ToArray();
                             header.setColWidths(cols);
                         }
-                        
+
                         Table table = CreateTable(header, cols);
-                        if(header.TableWidth > 0)
+                        if (header.TableWidth > 0)
                         {
                             table.SetWidth(MillimetersToPoints(header.TableWidth));
                         }
-                        foreach (var col  in header.Columns)
+                        foreach (var col in header.Columns)
                         {
                             if (col.GetType().Equals(typeof(iTable)))
                             {
@@ -147,50 +165,56 @@ namespace PDfCreator.Print
                             {
                                 AddColumn((iColumn)col, table);
                             }
-                            
+
 
                         }
                         document.Add(table);
                     }
                 }
                 //Adding Detail section
-                if (invoice.Detail.DetailHeader.Columns.ToArray().Count() > 0)
+                if (invoice.Detail.Detail.Columns.Count > 0)
                 {
                     float[] tblColwidth = invoice.Detail.getColWidths();
                     float[] cols;
                     if (tblColwidth != null && tblColwidth.Length > 0)
                     {
-                        cols = tblColwidth; 
+                        cols = tblColwidth;
                         Table table = CreateTable(invoice.Detail.DetailHeader, cols);
+                        table.SetFixedLayout();
                         foreach (var col in invoice.Detail.DetailHeader.Columns)
                         {
-                            AddColumn((iColumn)col, table,tableType:TableType.header);
+                            AddColumn((iColumn)col, table, tableType: TableType.header);
                         }
                         if (invoice.Document.DetailDataType == DataType.csv)
                         {
                             if (File.Exists(invoice.Document.DetailSource))
                             {
-                                LoadCsvTable(invoice.Document.DetailSource, invoice.Detail.Detail.Columns.ToList(), table);
+                                LoadCsvTable(invoice.Document.DetailSource, invoice.Detail.Detail.Columns, table);
                             }
-                            
+                            else
+                            {
+                                LoadBlankTable(invoice.Detail.Detail.Columns, table);
+                            }
 
                         }
-                        else if(invoice.Document.DetailDataType==DataType.SQLServer)
+                        else if (invoice.Document.DetailDataType == DataType.SQLServer)
                         {
                             //PrepareSqlReportData(invoice, param, invoice.Detail.Detail.Columns.ToList(), table);
                             //LoadSqlTable(DetailData , invoice.Document.DetailFields, invoice.Detail.Detail.Columns.ToList(), table);
-                            LoadSqlTableFixedRows(DetailData, invoice.Document.DetailFields, invoice.Detail.Detail.Columns.ToList(), table, startrow);
-                            
+                            LoadSqlTableFixedRows(DetailData, invoice.Document.DetailFields, invoice.Detail.Detail.Columns, table, startrow);
+
                         }
                         foreach (var col in invoice.Detail.DetailFooter.Columns)
                         {
-                            AddColumn((iColumn)col, table,tableType:TableType.footer);
+                            AddColumn((iColumn)col, table, tableType: TableType.footer);
                         }
+                        table.IsKeepTogether();
                         document.Add(table);
+
                     }
-                    
+
                     //float[] cols = invoice.Detail.DetailHeader.Columns.ToArray().Select(x => { float i = 1; return i; }).ToArray();
-                    
+
                 }
                 //Addding Footer section
                 foreach (var repFooter in invoice.ReportFooters)
@@ -209,7 +233,7 @@ namespace PDfCreator.Print
                             cols = header.Columns.ToArray().Select(x => { float i = 1; return i; }).ToArray();
                             header.setColWidths(cols);
                         }
-                        Table table = CreateTable(header,cols);
+                        Table table = CreateTable(header, cols);
                         foreach (var col in header.Columns)
                         {
                             if (col.GetType().Equals(typeof(iTable)))
@@ -234,12 +258,13 @@ namespace PDfCreator.Print
             }
             finally
             {
-                
+
             }
         }
 
-        private Table CreateTable(iTable tbl,float[] cols)
+        private Table CreateTable(iTable tbl, float[] cols)
         {
+            if (cols.Count() == 0) cols = new float[] { 1 };
             Table table = new Table(GetUnitValue(tbl.ColumnArrayUnit, cols));
             if (tbl.TableWidth > 0)
             {
@@ -249,7 +274,118 @@ namespace PDfCreator.Print
             table.SetVerticalAlignment(GetVerticalAlignment(tbl.VerticalAlignment));
             if (tbl.UserAllAvailableWidth == true) table.UseAllAvailableWidth();
             if (tbl.IsFixedLayout == true) table.SetFixedLayout();
+            if (tbl.NoBorder == true)
+            {
+                table.SetBorder(Border.NO_BORDER);
+            }
+            else
+            {
+                table.SetBorder(Border.NO_BORDER);
+                if (tbl.NoBottomBorder == false) table.SetBorderBottom(new SolidBorder(tbl.BorderWidth)); else table.SetBorderBottom(Border.NO_BORDER);
+                if (tbl.NoRightBorder == false) table.SetBorderRight(new SolidBorder(tbl.BorderWidth)); else table.SetBorderRight(Border.NO_BORDER);
+                if (tbl.NoTopBorder == false) table.SetBorderTop(new SolidBorder(tbl.BorderWidth)); else table.SetBorderTop(Border.NO_BORDER);
+                if (tbl.NoLeftBorder == false) table.SetBorderLeft(new SolidBorder(tbl.BorderWidth)); else table.SetBorderLeft(Border.NO_BORDER);
+            }
+            SettableMargins(table, tbl.Margin);
+            SettablePaddings(table, tbl.Padding);
+            if (tbl.Height > 0)
+            {
+                table.SetHeight(tbl.Height);
+            }
             return table;
+        }
+
+        private void SettableMargins(Table tbl, string margins)
+        {
+            if (string.IsNullOrEmpty(margins)) { tbl.SetMargin(1); return; }
+            string[] strMargins = margins.Split(',');
+            float leftMargin = 0; float topMargin = 0; float rightMargin = 0; float bottomMargin = 0;
+            float.TryParse(strMargins[0], out leftMargin);
+            if (strMargins.Length > 1) float.TryParse(strMargins[1], out topMargin);
+            if (strMargins.Length > 2) float.TryParse(strMargins[2], out rightMargin);
+            if (strMargins.Length > 3) float.TryParse(strMargins[3], out bottomMargin);
+            if (strMargins.Count() == 1)
+            {
+                tbl.SetMargin(leftMargin);
+            }
+            else
+            {
+                tbl.SetMarginTop(topMargin);
+                tbl.SetMarginBottom(bottomMargin);
+                tbl.SetMarginLeft(leftMargin);
+                tbl.SetMarginRight(rightMargin);
+            }
+
+
+        }
+        private void SetCellMargins(Cell tbl, string margins)
+        {
+            if (string.IsNullOrEmpty(margins)) { tbl.SetMargin(1); return; }
+            string[] strMargins = margins.Split(',');
+            float leftMargin = 0; float topMargin = 0; float rightMargin = 0; float bottomMargin = 0;
+            float.TryParse(strMargins[0], out leftMargin);
+            if (strMargins.Length > 1) float.TryParse(strMargins[1], out topMargin);
+            if (strMargins.Length > 2) float.TryParse(strMargins[2], out rightMargin);
+            if (strMargins.Length > 3) float.TryParse(strMargins[3], out bottomMargin);
+            if (strMargins.Count() == 0)
+            {
+                tbl.SetMargin(leftMargin);
+            }
+            else
+            {
+                tbl.SetMarginTop(topMargin);
+                tbl.SetMarginBottom(bottomMargin);
+                tbl.SetMarginLeft(leftMargin);
+                tbl.SetMarginRight(rightMargin);
+            }
+
+
+        }
+        private void SettablePaddings(Table tbl, string margins)
+        {
+            if (string.IsNullOrEmpty(margins)) { tbl.SetPadding(1); return; }
+            string[] strMargins = margins.Split(',');
+            float leftMargin = 0; float topMargin = 0; float rightMargin = 0; float bottomMargin = 0;
+            float.TryParse(strMargins[0], out leftMargin);
+            if (strMargins.Length > 1) float.TryParse(strMargins[1], out topMargin);
+            if (strMargins.Length > 2) float.TryParse(strMargins[2], out rightMargin);
+            if (strMargins.Length > 3) float.TryParse(strMargins[3], out bottomMargin);
+            if (strMargins.Count() == 0)
+            {
+                tbl.SetPadding(leftMargin);
+            }
+            else
+            {
+                tbl.SetPaddingTop(topMargin);
+                tbl.SetPaddingBottom(bottomMargin);
+                tbl.SetPaddingLeft(leftMargin);
+                tbl.SetPaddingRight(rightMargin);
+            }
+
+
+        }
+        private void SetCellPaddings(Cell tbl, string margins)
+        {
+            if (string.IsNullOrEmpty(margins)) { tbl.SetPadding(1); return; }
+            string[] strMargins = margins.Split(',');
+            float leftMargin = 0; float topMargin = 0; float rightMargin = 0; float bottomMargin = 0;
+            float.TryParse(strMargins[0], out leftMargin);
+            if (strMargins.Length > 1) float.TryParse(strMargins[1], out topMargin);
+            if (strMargins.Length > 2) float.TryParse(strMargins[2], out rightMargin);
+            if (strMargins.Length > 3) float.TryParse(strMargins[3], out bottomMargin);
+            if (strMargins.Count() == 0)
+            {
+                tbl.SetPadding(leftMargin);
+            }
+            else
+            {
+                tbl.SetPaddingTop(topMargin);
+                tbl.SetPaddingBottom(bottomMargin);
+                tbl.SetPaddingLeft(leftMargin);
+                tbl.SetPaddingRight(rightMargin);
+            }
+
+
         }
         //private void AddDetailHeaderColumn(iColumn col, Table table)
         //{
@@ -328,22 +464,41 @@ namespace PDfCreator.Print
         //    if (col.IsItalic == true) cell.SetItalic();
         //    table.AddFooterCell(cell);
         //}
-        private void LoadCsvTable(string filename, List<iColumn> cols, Table table)
+        private void LoadCsvTable(string filename, ArrayList cols, Table table)
         {
             string csv = File.ReadAllText(filename);
             if (string.IsNullOrEmpty(csv) == true) return;
             string[,] darray = LoadCsv(csv);
-            for (int r = 0; r < darray.GetLength(0); r++)
+            int rowNum = darray.GetLength(0);
+            if (FixedRows > 0) rowNum = FixedRows;
+
+            for (int r = 0; r < rowNum ; r++)
             {
                 int c = 0;
                 foreach (iColumn col in cols)
                 {
-                    if (c <= darray.GetLength(1))
+                    if (c < darray.GetLength(1))
                     {
                         AddColumn(col, table, darray[r, c]);
                     }
-
+                    else
+                    {
+                        AddColumn(col, table, "");
+                    }
                     c++;
+                }
+            }
+        }
+        private void LoadBlankTable(ArrayList cols, Table table)
+        {
+            int rowNum = 0;
+            if (FixedRows > 0) rowNum = FixedRows;
+            for (int r = 0; r < rowNum; r++)
+            {
+                foreach (iColumn col in cols)
+                {
+                    iColumn iCol = col as iColumn;
+                    AddColumn(iCol, table, "");
                 }
             }
         }
@@ -372,7 +527,7 @@ namespace PDfCreator.Print
             }
         }
 
-        private void LoadSqlTable(List<IDictionary<string,object>> rows,string fields, List<iColumn> cols, Table table)
+        private void LoadSqlTable(List<IDictionary<string, object>> rows, string fields, List<iColumn> cols, Table table)
         {
             if (rows == null) return;
             if (fields == null) fields = "";
@@ -380,50 +535,6 @@ namespace PDfCreator.Print
             foreach (var row in rows)
             {
                 int c = 0;
-                foreach (iColumn col in cols)
-                {
-                    if (c < colFields.Length )
-                    {
-                        string coltext;
-                        try
-                        {
-                            var txt = row[colFields[c]];
-                            coltext = txt == null ? "" : row[colFields[c]].ToString();
-                        }
-                        catch
-                        {
-                            coltext = "";
-                        }
-                        
-                        AddColumn(col, table, coltext);
-                    }
-                    else
-                    {
-                        AddColumn(col, table, "");
-                    }
-                    c++;
-                }
-            }
-        }
-
-        private void LoadSqlTableFixedRows(List<IDictionary<string, object>> rows, string fields, List<iColumn> cols, Table table,int startRow )
-        {
-            if (rows == null) return;
-            if (fields == null) fields = "";
-            string[] colFields = fields.Split(',');
-            int rowNum = rows.Count();
-            if (FixedRows > 0) rowNum = FixedRows; 
-            for (int r=0;r< rowNum; r++)
-            {
-                IDictionary<string, object> row = null;
-                if(r < rows.Count())
-                {
-                     row = rows[r+startRow ];
-                }
-                
-               
-                int c = 0;
-                
                 foreach (iColumn col in cols)
                 {
                     if (c < colFields.Length)
@@ -450,6 +561,63 @@ namespace PDfCreator.Print
             }
         }
 
+        private void LoadSqlTableFixedRows(List<IDictionary<string, object>> rows, string fields, ArrayList cols, Table table, int startRow)
+        {
+            if (rows == null) return;
+            if (fields == null) fields = "";
+            string[] colFields = fields.Split(',');
+            int rowNum = rows.Count();
+            if (FixedRows > 0) rowNum = FixedRows;
+            for (int r = 0; r < rowNum; r++)
+            {
+                IDictionary<string, object> row = null;
+                if (r < rows.Count())
+                {
+                    try
+                    {
+                        row = rows[r + startRow];
+                    }
+                    catch
+                    {
+                        row = null;
+                    }
+                }
+
+
+                int c = 0;
+
+                foreach (iColumn col in cols)
+                {
+                    if (row == null)
+                    {
+                        AddColumn(col, table, "");
+                        continue;
+                    }
+                    if (c < colFields.Length)
+                    {
+                        string coltext;
+                        try
+                        {
+                            var txt = row[colFields[c]];
+                            coltext = txt == null ? "" : txt.ToString();
+                        }
+                        catch
+                        {
+                            coltext = "";
+                        }
+
+                        AddColumn(col, table, coltext);
+                    }
+                    else
+                    {
+
+                        AddColumn(col, table, " ");
+                    }
+                    c++;
+                }
+            }
+        }
+
         private void AddTable(iTable colTable, Table parentTable)
         {
             float[] cols = colTable.Columns.ToArray().Select(x => { float i = 1; return i; }).ToArray();
@@ -465,24 +633,41 @@ namespace PDfCreator.Print
                     AddTable((iTable)col, table);
                 }
             }
-            parentTable.AddCell(table);
+            Cell cell = new Cell(colTable.RowSpan, colTable.ColSpan);
+            if (colTable.NoBorder == true)
+            {
+                cell.SetBorder(Border.NO_BORDER);
+            }
+            else
+            {
+                table.SetBorder(Border.NO_BORDER);
+                if (colTable.NoBottomBorder == false) cell.SetBorderBottom(new SolidBorder(colTable.BorderWidth)); else table.SetBorderBottom(Border.NO_BORDER);
+                if (colTable.NoRightBorder == false) cell.SetBorderRight(new SolidBorder(colTable.BorderWidth)); else table.SetBorderRight(Border.NO_BORDER);
+                if (colTable.NoTopBorder == false) cell.SetBorderTop(new SolidBorder(colTable.BorderWidth)); else table.SetBorderTop(Border.NO_BORDER);
+                if (colTable.NoLeftBorder == false) cell.SetBorderLeft(new SolidBorder(colTable.BorderWidth)); else table.SetBorderLeft(Border.NO_BORDER);
+            }
+            SetCellMargins(cell, colTable.Margin);
+            SetCellPaddings(cell, colTable.Padding);
+            if (colTable.Height > 0)
+            {
+                cell.SetHeight(colTable.Height);
+            }
+            cell.Add(table);
+            parentTable.AddCell(cell);
         }
-        private void AddColumn(iColumn col, Table table, string text = null,TableType tableType=TableType.table)
+        private void AddColumn(iColumn col, Table table, string text = null, TableType tableType = TableType.table)
         {
+            Cell cell = new Cell(col.RowSpan, col.ColSpan);
+
             string colText = "";
 
             if (text != null)
             {
                 if (col.MaxChar == 0)
-                    if (decimal.TryParse(text,out decimal dec)==true)
-                    {
-                        colText = $"{dec:F2}";
-                    }
-                    else
-                    {
-                        colText = text;
-                    }
-                    
+
+                    colText = text;
+
+
                 else
                 {
                     if (text.Length > col.MaxChar)
@@ -512,10 +697,26 @@ namespace PDfCreator.Print
                     }
                 }
             }
-            
-                Cell cell = new Cell(col.RowSpan,col.ColSpan).Add(new Paragraph(colText == null ? "" : colText));
-            
-            
+            if (string.IsNullOrEmpty(col.FormatString) == false)
+            {
+                if (decimal.TryParse(colText, out decimal dec) == true)
+                {
+                    colText = dec.ToString(col.FormatString);
+                }
+            }
+
+            if (text != null && decimal.TryParse(colText, out decimal numtext))
+            {
+                cell.SetNextRenderer(new TruncateCellRenderer(cell, colText));
+            }
+
+            else
+            {
+                cell.Add(new Paragraph(colText == null ? "" : colText));
+            }
+
+
+
             cell.SetFont(GetPdfFont(col.FontName));
             cell.SetFontSize(col.FontSize);
             if (col.IsBold == true) cell.SetBold();
@@ -534,12 +735,19 @@ namespace PDfCreator.Print
             cell.SetTextAlignment(GetTextAlignment(col.TextAlignment));
             cell.SetHorizontalAlignment(GetHorizontalAlignment(col.HorizontalAlignment));
             cell.SetVerticalAlignment(GetVerticalAlignment(col.VerticalAlignment));
-            if (col.height > 0)
+            SetCellMargins(cell, col.Margin);
+            SetCellPaddings(cell, col.Padding);
+
+            if (col.MinHeight > 0)
             {
-                cell.SetHeight(col.height);
+                cell.SetMinHeight(col.MinHeight);
+            }
+            if (col.Height > 0)
+            {
+                cell.SetHeight(col.Height);
             }
             if (col.IsItalic == true) cell.SetItalic();
-            if(tableType==TableType.header)
+            if (tableType == TableType.header)
             {
                 table.AddHeaderCell(cell);
             }
@@ -551,35 +759,50 @@ namespace PDfCreator.Print
             {
                 table.AddCell(cell);
             }
-            
+
         }
         private string GetColumnText(iColumn col)
         {
-            if (string.IsNullOrEmpty(col.Text )==true) return "";
-            
+            if (string.IsNullOrEmpty(col.Text) == true) return "";
+            if (col.DisplayOnlyinLastPage == true)
+            {
+                if (IsLastPage == false)
+                {
+                    return "";
+                }
+            }
             //get the value from the ReportSouce queried 
             if (col.Text.Substring(0, 1) == "@")
             {
                 if (col.Text.Length == 1) return col.Text;
                 var key = col.Text.Substring(1);
-                var txt = this.ReportData[key];
-                return txt == null ? col.Text : txt.ToString() == "" ? col.Text : txt.ToString();
-            }
-            else if (col.Text.Substring(0, 1) == "$")//get the value from parameter
-            {
-                if (col.Text.Length == 1) return col.Text;
-                var key = col.Text.Substring(1);
-                
                 try
                 {
-                    var txt = this.InputParameters[key];
-                    return txt == null ? col.Text : txt.ToString()==""?col.Text: txt.ToString();
+                    var txt = this.ReportData[key];
+                    return txt == null ? col.Text : txt.ToString() == "" ? col.Text : txt.ToString();
                 }
                 catch
                 {
                     return col.Text;
                 }
-                
+
+
+            }
+            else if (col.Text.Substring(0, 1) == "$")//get the value from parameter
+            {
+                if (col.Text.Length == 1) return col.Text;
+                var key = col.Text.Substring(1);
+
+                try
+                {
+                    var txt = this.InputParameters[key];
+                    return txt == null ? col.Text : txt.ToString() == "" ? col.Text : txt.ToString();
+                }
+                catch
+                {
+                    return col.Text;
+                }
+
             }
             else
             {
@@ -624,7 +847,7 @@ namespace PDfCreator.Print
                 case iHorizontalAlignment.Center:
                     return HorizontalAlignment.CENTER;
                 case iHorizontalAlignment.Right:
-                    return HorizontalAlignment.LEFT;
+                    return HorizontalAlignment.RIGHT;
                 default:
                     return HorizontalAlignment.LEFT;
             }
@@ -736,64 +959,88 @@ namespace PDfCreator.Print
         }
 
         //Loading json to c# class
-        public Invoice  LoadInvFromJson(string jsonString)
+        public Invoice LoadInvFromJson(string jsonString)
         {
             var jObjectFromjson = JsonConvert.DeserializeObject<JObject>(jsonString);
+
             var invoceFromjson = JsonConvert.DeserializeObject<Invoice>(jsonString);
-            if (invoceFromjson.Document  == null) throw new Exception("File format is not correct. It cannot be open");
-            Invoice inv = new Invoice();
+            if (invoceFromjson.Document == null) throw new Exception("File format is not correct. It cannot be open");
+            Invoice inv = invoceFromjson.DeepCopy();
+            var jdetail = jObjectFromjson.GetValue("Detail");
+            if (jdetail != null)
+            {
+                var JdetailDetail = ((JObject)jdetail).GetValue("Detail");
+                if (JdetailDetail != null)
+                {
+                    var jdetailcols = ((JObject)JdetailDetail).GetValue("Columns");
+                    var detailCols = jdetailcols.ToObject<List<iColumn>>();
+                    inv.Detail.Detail.Columns = new ArrayList(detailCols);
+                }
+            }
             //Loading in Document Clas
             inv.Document = invoceFromjson.Document.DeepCopy();
             var jDocument = jObjectFromjson.GetValue("Document") as JObject;
-            if(jDocument != null)
+            if (jDocument != null)
             {
                 var detailsourse = jDocument.GetValue("DetailSource");
-                if(detailsourse != null)
+                if (detailsourse != null)
                 {
                     inv.Document.setDetailSource(detailsourse != null ? detailsourse.ToString() : "");
                 }
                 var reportSource = jDocument.GetValue("ReportSource");
-                inv.Document.setReportSource(reportSource==null?"":reportSource.ToString());
+                inv.Document.setReportSource(reportSource == null ? "" : reportSource.ToString());
                 var constring = jDocument.GetValue("ConnectionString");
                 inv.Document.setSqlConnection(constring == null ? "" : constring.ToString());
                 var QueryParameter = jDocument.GetValue("QueryParameter");
                 inv.Document.setQueryParameter(QueryParameter == null ? "" : QueryParameter.ToString());
 
             }
-            //inv.Document.setDetailCsvSource(jDocument.get)
-            foreach (var rptheader in invoceFromjson.ReportHeaders)
-            {
-                if (rptheader != null && rptheader.GetType().Equals(typeof(JObject)))
-                {
-                    AddColumnToTableFromJson((JObject)rptheader, inv.ReportHeaders);
-                }
 
-            }
-            inv.Detail.ColumnArrayUnit = invoceFromjson.Detail.ColumnArrayUnit;
-            inv.Detail.DetailHeader.ColumnArrayUnit = invoceFromjson.Detail.DetailHeader.ColumnArrayUnit;
-            inv.Detail.ColWidths = invoceFromjson.Detail.ColWidths;
-            foreach (var col in invoceFromjson.Detail.DetailHeader.Columns)
-            {
-                if (col != null && col.GetType().Equals(typeof(JObject)))
-                {
-                    AddColumnToTableFromJson((JObject)col, inv.Detail.DetailHeader.Columns);
-                }
-            }
-            foreach (var col in invoceFromjson.Detail.DetailFooter.Columns)
-            {
-                if (col != null && col.GetType().Equals(typeof(JObject)))
-                {
-                    AddColumnToTableFromJson((JObject)col, inv.Detail.DetailFooter.Columns);
-                }
-            }
-            foreach (var rptfooter in invoceFromjson.ReportFooters)
-            {
-                if (rptfooter != null && rptfooter.GetType().Equals(typeof(JObject)))
-                {
-                    AddColumnToTableFromJson((JObject)rptfooter, inv.ReportFooters);
-                }
+            //Loading reportheaders
+            ArrayList rptHeaders = ConvertToObjectListFromJson(inv.ReportHeaders);
+            inv.SetReportHeaders(rptHeaders);
 
-            }
+            //foreach (var rptheader in invoceFromjson.ReportHeaders)
+            //{
+            //    if (rptheader != null && rptheader.GetType().Equals(typeof(JObject)))
+            //    {
+            //        AddColumnToTableFromJson((JObject)rptheader, inv.ReportHeaders);
+            //    }
+
+            //}
+            //Loading Detail
+            //inv.Detail.ColumnArrayUnit = invoceFromjson.Detail.ColumnArrayUnit;
+            //inv.Detail.DetailHeader.ColumnArrayUnit = invoceFromjson.Detail.DetailHeader.ColumnArrayUnit;
+
+            ArrayList DetailHeaderColumns = ConvertToObjectListFromJson(inv.Detail.DetailHeader.Columns);
+            inv.Detail.DetailHeader.Columns = DetailHeaderColumns;
+            ArrayList DetailFooterColumns = ConvertToObjectListFromJson(inv.Detail.DetailFooter.Columns);
+            inv.Detail.DetailFooter.Columns = DetailFooterColumns;
+            //Loadint Report Footers
+            ArrayList rptFooters = ConvertToObjectListFromJson(inv.ReportFooters);
+            inv.SetReportFooters(rptFooters);
+            //foreach (var col in invoceFromjson.Detail.DetailHeader.Columns)
+            //{
+            //    if (col != null && col.GetType().Equals(typeof(JObject)))
+            //    {
+            //        AddColumnToTableFromJson((JObject)col, inv.Detail.DetailHeader.Columns);
+            //    }
+            //}
+            //foreach (var col in invoceFromjson.Detail.DetailFooter.Columns)
+            //{
+            //    if (col != null && col.GetType().Equals(typeof(JObject)))
+            //    {
+            //        AddColumnToTableFromJson((JObject)col, inv.Detail.DetailFooter.Columns);
+            //    }
+            //}
+            //foreach (var rptfooter in invoceFromjson.ReportFooters)
+            //{
+            //    if (rptfooter != null && rptfooter.GetType().Equals(typeof(JObject)))
+            //    {
+            //        AddColumnToTableFromJson((JObject)rptfooter, inv.ReportFooters);
+            //    }
+
+            //}
             return inv;
         }
         private void AddColumnToTableFromJson(JObject obj, ArrayList Columns)
@@ -801,9 +1048,10 @@ namespace PDfCreator.Print
             iTable tbl = ((JObject)obj).ToObject<iTable>();
             if (tbl.Columns.Count > 0)
             {
-                iTable newTable = new iTable();
+                iTable newTable = tbl.DeepCopy();
                 Columns.Add(newTable);
                 newTable.ColumnArrayUnit = tbl.ColumnArrayUnit;
+                newTable.Columns = new ArrayList();
                 foreach (var col in tbl.Columns)
                 {
                     JObject column = (JObject)col;
@@ -820,9 +1068,38 @@ namespace PDfCreator.Print
 
             }
         }
+        private ArrayList ConvertToObjectListFromJson(ArrayList arrayList)
+        {
+            ArrayList Columns = new ArrayList();
+            foreach (var obj in arrayList)
+            {
+                iTable tbl = ((JObject)obj).ToObject<iTable>();
+                if (tbl.Columns.Count > 0)
+                {
+                    iTable newTable = tbl.DeepCopy();
+                    Columns.Add(newTable);
+                    newTable.ColumnArrayUnit = tbl.ColumnArrayUnit;
+                    newTable.Columns = new ArrayList();
+                    //foreach (var col in tbl.Columns)
+                    //{
+                    //    JObject column = (JObject)col;
+                    newTable.Columns = ConvertToObjectListFromJson(tbl.Columns);
+                    //}
+                }
+                else
+                {
+                    iColumn column = ((JObject)obj).ToObject<iColumn>();
+                    if (column != null)
+                    {
+                        Columns.Add(column);
+                    }
 
-        
-        private  JObject  prepareParameter(string jsonString)
+                }
+            }
+            return Columns;
+        }
+
+        private JObject prepareParameter(string jsonString)
         {
             //ExpandoObject obj = JsonConvert.DeserializeObject<ExpandoObject>(jsonString);
             JObject jobj = JsonConvert.DeserializeObject<JObject>(jsonString);

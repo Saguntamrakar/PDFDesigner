@@ -6,7 +6,9 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 using Newtonsoft.Json.Linq;
-using  System.Dynamic;
+using System.Dynamic;
+using PDfCreator.Models;
+using static PDfCreator.Models.iDocument;
 
 namespace PDfCreator.Models
 {
@@ -43,7 +45,7 @@ namespace PDfCreator.Models
     {
         private string _DetailSource = "";
         private string _ReportSource = "";
-        private string _ConnectionString="";
+        private string _ConnectionString = "";
         private string _QueryParameter;
         private JObject _ReportDataObject;
         private List<JObject> _DetailDataObject;
@@ -58,14 +60,14 @@ namespace PDfCreator.Models
         public string ConnectionString { get { return _ConnectionString; } }
         public string QueryParameter { get { return _QueryParameter; } }
         public string DetailFields { get; set; }
-        
+
         public DataType DetailDataType { get; set; } = DataType.csv;
         public void setDetailSource(string source)
         {
             _DetailSource = source;
         }
-        
-        
+
+
         public void setReportSource(string source)
         {
             _ReportSource = source;
@@ -139,18 +141,35 @@ namespace PDfCreator.Models
     {
         iTable _DetailHeader;
         iTable _DetailFooter;
-        iFixedColTable _Detail;
+        iTable _Detail;
+        private bool IsDetailColumnsChanged;
         private float[] columns { get; set; }
         private string _ColWidths = "";
-        public string ColWidths { get { return _ColWidths; } set { _ColWidths = value; SetColumns(); } }
+        public string ColWidths
+        {
+            get { return _ColWidths; }
+            set
+            {
+                var oldvalue = _ColWidths;
+                if (value != oldvalue)
+                {
+                    _ColWidths = value;
+                    SetColumns();
+
+                }
+            }
+        }
         public iColumnArrayUnit ColumnArrayUnit { get; set; } = iColumnArrayUnit.PercentArray;
         public iTable DetailHeader { get { return _DetailHeader; } }
-        public iFixedColTable Detail { get { return _Detail; } }
+        public iTable  Detail { get { return _Detail; } }
         public iTable DetailFooter { get { return _DetailFooter; } }
+        public int FixedRows { get; set; }
         public iDetail()
         {
             _DetailHeader = new iTable();
             _DetailFooter = new iTable();
+
+            _Detail = new iTable();
         }
         private void SetColumns()
         {
@@ -164,10 +183,14 @@ namespace PDfCreator.Models
                     colwidths.Add(fCol);
                 }
                 columns = colwidths.ToArray();
-                _Detail = new iFixedColTable(colwidths.ToArray());
+                var oldFilxedCols = _Detail.Columns;
+                // _Detail = new iFixedColTable(columns,oldFilxedCols,ColumnArrayUnit);
+
 
             }
         }
+
+
         public float[] getColWidths()
         {
             return columns;
@@ -175,6 +198,7 @@ namespace PDfCreator.Models
         public iDetail DeepCopy()
         {
             iDetail detail = (iDetail)this.MemberwiseClone();
+
             return detail;
         }
 
@@ -185,11 +209,22 @@ namespace PDfCreator.Models
         private float[] _widths;
         public string ColWidths { get { return _ColWidths; } set { _ColWidths = value; SetColumns(); } }
         public float TableWidth { get; set; }
+        public float Height { get; set; }
         public iHorizontalAlignment HorizontalAlignment { get; set; } = iHorizontalAlignment.Left;
         public iVerticalAlignment VerticalAlignment { get; set; } = iVerticalAlignment.Middle;
         public bool IsFixedLayout { get; set; }
         public bool UserAllAvailableWidth { get; set; }
         public ArrayList Columns { get; set; }
+        public bool NoBorder { get; set; }
+        public bool NoLeftBorder { get; set; }
+        public bool NoRightBorder { get; set; }
+        public bool NoTopBorder { get; set; }
+        public bool NoBottomBorder { get; set; }
+        public float BorderWidth { get; set; }
+        public string Margin { get; set; }
+        public string Padding { get; set; }
+        public int ColSpan { get; set; }
+        public int RowSpan { get; set; }
         public iColumnArrayUnit ColumnArrayUnit { get; set; } = iColumnArrayUnit.PercentArray;
         public iTable()
         {
@@ -231,21 +266,42 @@ namespace PDfCreator.Models
     public class iFixedColTable
     {
         List<iColumn> _Columns;
-        public IReadOnlyList<iColumn> Columns { get { return _Columns.AsReadOnly(); } }
+        float[] _Cols;
+        public List<iColumn> Columns { get { return _Columns; } set { _Columns = value; } }
         public iColumnArrayUnit ColumnArrayUnit { get; set; } = iColumnArrayUnit.PercentArray;
-        public int FixedRows { get; set; }
-        public iFixedColTable(float[] cols)
+
+        public iFixedColTable()
         {
-            _Columns = new List<iColumn>();
-            for (int i = 0; i < cols.Length; i++)
-            {
-                _Columns.Add(new iColumn { width = cols[i] });
-            }
 
         }
 
+        public iFixedColTable(float[] cols, List<iColumn> icolumns, iColumnArrayUnit colArrayunit)
+        {
+            _Cols = cols;
+            ColumnArrayUnit = colArrayunit;
+            Columns = new List<iColumn>();
+            //for (int i = 0; i < cols.Length; i++)
+            //{
+            //    if (icolumns!=null && i < icolumns.Count)
+            //    {
+            //        Columns.Add(icolumns[i]);
+            //    }
+            //    else
+            //    {
+            //        Columns.Add(new iColumn { width = cols[i] });
+            //    }
 
+        }
     }
+
+    //public iFixedColTable DeepCopy()
+    //{
+
+    //    return (iFixedColTable)this.MemberwiseClone();
+
+    //}
+
+
     public class iColumn
     {
 
@@ -253,7 +309,7 @@ namespace PDfCreator.Models
         public iColor BackgroundColor { get; set; }
         public float BoarderWidth { get; set; }
         public string Text { get; set; }
-        public int FontSize { get; set; } = 14;
+        public int FontSize { get; set; } = 10;
         public bool IsBold { get; set; }
         public float BorderWidth { get; set; } = 1;
         public iFonts FontName { get; set; } = iFonts.HELVETICA;
@@ -265,12 +321,21 @@ namespace PDfCreator.Models
         public bool IsItalic { get; set; }
         public int ColSpan { get; set; }
         public int RowSpan { get; set; }
-        public float height { get; set; }
+        public float Height { get; set; }
+        public string Margin { get; set; }
+        public string Padding { get; set; }
+        public bool DisplayOnlyinLastPage { get; set; }
+        public string FormatString { get; set; } = "";
         public iTextAlignment TextAlignment { get; set; } = iTextAlignment.Left;
         public iHorizontalAlignment HorizontalAlignment { get; set; } = iHorizontalAlignment.Left;
         public iVerticalAlignment VerticalAlignment { get; set; } = iVerticalAlignment.Middle;
         public int MaxChar { get; set; } = 0;
-
+        public int MinHeight { get; set; }
+        public iColumn DeepCopy()
+        {
+            iColumn column = (iColumn)this.MemberwiseClone();
+            return column;
+        }
     }
     public enum iTextAlignment
     {
@@ -317,5 +382,5 @@ namespace PDfCreator.Models
         table, header, footer
     }
 
-    
+
 }
