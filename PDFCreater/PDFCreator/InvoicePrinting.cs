@@ -18,6 +18,9 @@ using PDfCreator.Helper;
 using System.Data.SqlClient;
 using Dapper;
 using System.Dynamic;
+using iText.IO.Image;
+using iText.Kernel.Utils;
+
 namespace PDfCreator.Print
 {
     public class InvoicePrinting
@@ -35,7 +38,7 @@ namespace PDfCreator.Print
         private int FixedRows;
         private bool IsLastPage;
         private bool IsInMemomory;
-        public InvoicePrinting(bool isinMemory=false)
+        public InvoicePrinting(bool isinMemory = false)
         {
 
             IsInMemomory = isinMemory;
@@ -44,6 +47,19 @@ namespace PDfCreator.Print
 
             font = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
             bold = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+        }
+        public void MergePdfinMemory(MemoryStream memStream, List<byte[]> pdfList)
+        {
+            PdfDocument pdfdoc = new PdfDocument(new PdfWriter(memStream));
+            PdfMerger Merger = new PdfMerger(pdfdoc);
+            foreach (var pdfFile in pdfList)
+            {
+                MemoryStream mem = new MemoryStream(pdfFile);
+                PdfDocument doc = new PdfDocument(new PdfReader(mem));
+                Merger.Merge(doc, 1, doc.GetNumberOfPages());
+                doc.Close();
+            }
+            pdfdoc.Close();
         }
         public void PrintInvoice(Invoice invoice, string filename, MemoryStream memStream = null)
         {
@@ -56,17 +72,17 @@ namespace PDfCreator.Print
                 ps = GetPaperSize(invoice.Document.PaperSize, invoice.Document.CustomSize);
                 dest = filename;
                 PdfWriter pdfWriter;
-                if (IsInMemomory == true)
+                if (memStream != null)
                 {
-                    
+
                     pdfWriter = new PdfWriter(memStream);
-                    
+
                 }
                 else
                 {
-                     pdfWriter = new PdfWriter(dest);
+                    pdfWriter = new PdfWriter(dest);
                 }
-                
+
                 pdf = new PdfDocument(pdfWriter);
                 if (invoice.Document.Oreintation == iOreintation.Landscape)
                 {
@@ -122,7 +138,7 @@ namespace PDfCreator.Print
                     CreatePDF(invoice, 0);
                 }
 
-                
+
             }
             catch (Exception ex)
             {
@@ -132,7 +148,7 @@ namespace PDfCreator.Print
             finally
             {
                 document.Close();
-                
+
             }
         }
         //public Stream GetMemoryOfInvoice(Invoice invoice)
@@ -176,6 +192,10 @@ namespace PDfCreator.Print
                             if (col.GetType().Equals(typeof(iTable)))
                             {
                                 AddTable((iTable)col, table);
+                            }
+                            else if (col.GetType().Equals(typeof(iImage)))
+                            {
+                                AddImageColumn((iImage)col, table);
                             }
                             else
                             {
@@ -255,6 +275,10 @@ namespace PDfCreator.Print
                             if (col.GetType().Equals(typeof(iTable)))
                             {
                                 AddTable((iTable)col, table);
+                            }
+                            else if (col.GetType().Equals(typeof(iImage)))
+                            {
+                                AddImageColumn((iImage)col, table);
                             }
                             else
                             {
@@ -488,7 +512,7 @@ namespace PDfCreator.Print
             int rowNum = darray.GetLength(0);
             if (FixedRows > 0) rowNum = FixedRows;
 
-            for (int r = 0; r < rowNum ; r++)
+            for (int r = 0; r < rowNum; r++)
             {
                 int c = 0;
                 foreach (iColumn col in cols)
@@ -777,6 +801,70 @@ namespace PDfCreator.Print
             }
 
         }
+
+        private void AddImageColumn(iImage col, Table table, TableType tableType = TableType.table)
+        {
+            Cell cell = new Cell(col.RowSpan, col.ColSpan);
+
+            Image img = new Image(ImageDataFactory.Create(col.GetImage()));
+            if (col.AutoScale == true)
+            {
+                img.SetAutoScale(true);
+            }
+            if (col.Width > 0)
+            {
+                if (col.ColumnArrayUnit == iColumnArrayUnit.PointArray)
+                {
+                    img.SetWidth(UnitValue.CreatePointValue(col.Width));
+                }
+                else
+                {
+                    img.SetWidth(UnitValue.CreatePercentValue(col.Width));
+                }
+
+            }
+            cell.Add(img);
+            if (col.NoBorder == true)
+            {
+                cell.SetBorder(Border.NO_BORDER);
+            }
+            else
+            {
+                cell.SetBorder(Border.NO_BORDER);
+                if (col.NoBottomBorder == false) cell.SetBorderBottom(new SolidBorder(col.BorderWidth)); else cell.SetBorderBottom(Border.NO_BORDER);
+                if (col.NoRightBorder == false) cell.SetBorderRight(new SolidBorder(col.BorderWidth)); else cell.SetBorderRight(Border.NO_BORDER);
+                if (col.NoTopBorder == false) cell.SetBorderTop(new SolidBorder(col.BorderWidth)); else cell.SetBorderTop(Border.NO_BORDER);
+                if (col.NoLeftBorder == false) cell.SetBorderLeft(new SolidBorder(col.BorderWidth)); else cell.SetBorderLeft(Border.NO_BORDER);
+            }
+            //cell.SetTextAlignment(GetTextAlignment(col.TextAlignment));
+            cell.SetHorizontalAlignment(GetHorizontalAlignment(col.HorizontalAlignment));
+            cell.SetVerticalAlignment(GetVerticalAlignment(col.VerticalAlignment));
+            SetCellMargins(cell, col.Margin);
+            SetCellPaddings(cell, col.Padding);
+
+            if (col.MinHeight > 0)
+            {
+                cell.SetMinHeight(col.MinHeight);
+            }
+            if (col.Height > 0)
+            {
+                cell.SetHeight(col.Height);
+            }
+            if (tableType == TableType.header)
+            {
+                table.AddHeaderCell(cell);
+            }
+            else if (tableType == TableType.footer)
+            {
+                table.AddFooterCell(cell);
+            }
+            else
+            {
+                table.AddCell(cell);
+            }
+
+        }
+
         private string GetColumnText(iColumn col)
         {
             if (string.IsNullOrEmpty(col.Text) == true) return "";
@@ -788,6 +876,26 @@ namespace PDfCreator.Print
                 }
             }
             //get the value from the ReportSouce queried 
+            if (col.InLineParameter == true)
+            {
+                int startIndex = 0;
+                string LinText = col.Text;
+                while (startIndex >0 && startIndex  < LinText.Length)
+                {
+                    startIndex =LinText.IndexOf('$');
+                    if(startIndex >0 && startIndex  < LinText.Length)
+                    {
+                        int nextIndex = LinText.IndexOf(' ', startIndex + 1);
+                        string txtVariable = LinText.Substring(startIndex, nextIndex);
+                        var key = txtVariable.Substring(1);
+                        var txt = this.ReportData[key];
+                        string textToReplace = txt == null ? txtVariable : txt.ToString() == "" ? txtVariable : txt.ToString();
+                        LinText.Replace(txtVariable, textToReplace);
+
+                    }
+                }
+                return LinText;
+            }
             if (col.Text.Substring(0, 1) == "@")
             {
                 if (col.Text.Length == 1) return col.Text;
@@ -975,7 +1083,7 @@ namespace PDfCreator.Print
         }
 
         //Loading json to c# class
-        public Invoice LoadInvFromJson(string jsonString)
+        public Invoice LoadInvFromJsonString(string jsonString)
         {
             var jObjectFromjson = JsonConvert.DeserializeObject<JObject>(jsonString);
 
@@ -1102,14 +1210,31 @@ namespace PDfCreator.Print
                     newTable.Columns = ConvertToObjectListFromJson(tbl.Columns);
                     //}
                 }
+
                 else
                 {
-                    iColumn column = ((JObject)obj).ToObject<iColumn>();
-                    if (column != null)
+                    var tmpColumn = (JObject)obj;
+                    var path = tmpColumn["ImageString"];
+                    if (path != null)
                     {
-                        Columns.Add(column);
+                        iImage column = ((JObject)obj).ToObject<iImage>();
+                        if (column != null)
+                        {
+                            if (path.ToString() != "")
+                            {
+                                column.LoadImage(path.ToString());
+                            }
+                            Columns.Add(column);
+                        }
                     }
-
+                    else
+                    {
+                        iColumn column = ((JObject)obj).ToObject<iColumn>();
+                        if (column != null)
+                        {
+                            Columns.Add(column);
+                        }
+                    }
                 }
             }
             return Columns;

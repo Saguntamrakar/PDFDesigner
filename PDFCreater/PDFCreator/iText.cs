@@ -9,6 +9,8 @@ using Newtonsoft.Json.Linq;
 using System.Dynamic;
 using PDfCreator.Models;
 using static PDfCreator.Models.iDocument;
+using System.IO;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace PDfCreator.Models
 {
@@ -111,7 +113,7 @@ namespace PDfCreator.Models
         public float BoarderWidth { get; set; }
 
     }
-
+    
     public class iColor
     {
         public iColor()
@@ -164,6 +166,7 @@ namespace PDfCreator.Models
         public iTable  Detail { get { return _Detail; } }
         public iTable DetailFooter { get { return _DetailFooter; } }
         public int FixedRows { get; set; }
+        
         public iDetail()
         {
             _DetailHeader = new iTable();
@@ -305,7 +308,6 @@ namespace PDfCreator.Models
     public class iColumn
     {
 
-        public float width { get; set; } = 1;
         public iColor BackgroundColor { get; set; }
         public float BoarderWidth { get; set; }
         public string Text { get; set; }
@@ -331,10 +333,67 @@ namespace PDfCreator.Models
         public iVerticalAlignment VerticalAlignment { get; set; } = iVerticalAlignment.Middle;
         public int MaxChar { get; set; } = 0;
         public int MinHeight { get; set; }
+        public bool InLineParameter { get; set; }
         public iColumn DeepCopy()
         {
             iColumn column = (iColumn)this.MemberwiseClone();
             return column;
+        }
+    }
+    public class iImage
+    {
+        private string _path;
+        public bool AutoScale { get; set; }
+        public string Path { get { return _path; }  }
+        //public iColor BackgroundColor { get; set; }
+        public float BoarderWidth { get; set; }
+        //public string Text { get; set; }
+        //public int FontSize { get; set; } = 10;
+        //public bool IsBold { get; set; }
+        public float BorderWidth { get; set; } = 1;
+        //public iFonts FontName { get; set; } = iFonts.HELVETICA;
+        public bool NoBorder { get; set; }
+        public bool NoLeftBorder { get; set; }
+        public bool NoRightBorder { get; set; }
+        public bool NoTopBorder { get; set; }
+        public bool NoBottomBorder { get; set; }
+        //public bool IsItalic { get; set; }
+        public int ColSpan { get; set; }
+        public int RowSpan { get; set; }
+        public float Height { get; set; }
+        public string Margin { get; set; }
+        public string Padding { get; set; }
+        public bool DisplayOnlyinLastPage { get; set; }
+        public string FormatString { get; set; } = "";
+        //public iTextAlignment TextAlignment { get; set; } = iTextAlignment.Left;
+        public iHorizontalAlignment HorizontalAlignment { get; set; } = iHorizontalAlignment.Left;
+        public iVerticalAlignment VerticalAlignment { get; set; } = iVerticalAlignment.Middle;
+        //public int MaxChar { get; set; } = 0;
+        public int MinHeight { get; set; }
+        public iColumnArrayUnit ColumnArrayUnit { get; set; } = iColumnArrayUnit.PercentArray;
+        public int Width { get; set; }
+        private string _imageString;
+        public string ImageString { get { return _imageString; } }
+        public iColumn DeepCopy()
+        {
+            iColumn column = (iColumn)this.MemberwiseClone();
+            return column;
+        }
+        public void SetImage(string path)
+        {
+            _path = path;
+            byte[] imageBytes = System.IO.File.ReadAllBytes(path);
+            string base64String = Convert.ToBase64String(imageBytes);
+            _imageString= base64String;
+        }
+        public void LoadImage(string image)
+        {
+            _imageString = image;
+        }
+        public byte[] GetImage()
+        {
+            byte[] img= Convert.FromBase64String(ImageString);
+            return img;
         }
     }
     public enum iTextAlignment

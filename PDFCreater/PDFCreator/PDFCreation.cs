@@ -47,12 +47,27 @@ namespace PDfCreator
             header.Columns.Add(column);
             return  column;
         }
+
+        public iImage NewImage(iTable header,string imagePath)
+        {
+            iImage column = new iImage();
+            column.SetImage(imagePath);
+            header.Columns.Add(column);
+            return column;
+        }
         public void NewTableColumn(iTable header)
         {
             iTable column = new iTable();
             header.Columns.Add(column);
         }
         public bool RemoveColumn(iTable header,iColumn col)
+        {
+            var colCount = header.Columns.Count;
+            header.Columns.Remove(col);
+            if (header.Columns.Count == colCount - 1) return true;
+            return false;
+        }
+        public bool RemoveImage(iTable header, iImage col)
         {
             var colCount = header.Columns.Count;
             header.Columns.Remove(col);

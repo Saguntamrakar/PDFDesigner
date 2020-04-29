@@ -42,6 +42,7 @@ namespace PdfDesigner
             treeView1.Nodes.Clear();
             var doc = treeView1.Nodes.Add("Document");
             doc.Tag = inv.Document;
+            doc.ToolTipText = "Right Click for menu";
             //Report Header Section
             var headernod = treeView1.Nodes.Add("Headers");
             headernod.Tag = inv.ReportHeaders;
@@ -51,6 +52,7 @@ namespace PdfDesigner
                 i++;
                 var header = headernod.Nodes.Add($"Header({i})");
                 header.Tag = head;
+                header.ToolTipText = "Right Click for Menu";
                 if (head.GetType().Equals(typeof(iTable)))
                 {
                     foreach (var col in ((iTable)head).Columns)
@@ -64,17 +66,20 @@ namespace PdfDesigner
             //Report Detail Section
             TreeNode detail = treeView1.Nodes.Add("Detail");
             detail.Tag = inv.Detail;
-
+            detail.ToolTipText = "Right Click for Menu";
             TreeNode detailHeader = detail.Nodes.Add("Detail Header");
             detailHeader.Tag = inv.Detail.DetailHeader;
+            detailHeader.ToolTipText = "Right Click for Menu";
             foreach (var col in inv.Detail.DetailHeader.Columns)
             {
                 string colName = col.GetType().Equals(typeof(iColumn)) ? ((iColumn)col).Text : "Table";
                 var column = detailHeader.Nodes.Add(colName);
+                column.ToolTipText = "Right Click for Menu";
                 column.Tag = col;
             }
             TreeNode detailSection = detail.Nodes.Add("Data");
             detailSection.Tag = inv.Detail.Detail;
+            detailSection.ToolTipText = "Right Click for Menu";
             string[] detailColNames = new string[] { "" };
             if (string.IsNullOrEmpty(inv.Document.DetailFields) == false)
             {
@@ -94,28 +99,33 @@ namespace PdfDesigner
                     col.Text = colName;
 
                     colnod.Tag = col;
+                    colnod.ToolTipText = "Right Click for Menu";
                     c++;
                 }
             }
 
             TreeNode footerSection = detail.Nodes.Add("Detail Footer");
             footerSection.Tag = inv.Detail.DetailFooter;
+            footerSection.ToolTipText = "Right Click for Menu";
             foreach (var col in inv.Detail.DetailFooter.Columns)
             {
                 string colName = col.GetType().Equals(typeof(iColumn)) ? ((iColumn)col).Text : "Table";
                 var column = footerSection.Nodes.Add(colName);
+                column.ToolTipText = "Right Click for Menu";
                 column.Tag = col;
             }
 
             //Report Footer Section
             var footerernod = treeView1.Nodes.Add("Footers");
             footerernod.Tag = inv.ReportFooters;
+            footerernod.ToolTipText = "Right Click for Menu";
             i = 0;
             foreach (var foot in inv.ReportFooters)
             {
                 i++;
                 var footer = footerernod.Nodes.Add($"Footer({i})");
                 footer.Tag = foot;
+                footer.ToolTipText = "Right Click for Menu";
                 if (foot.GetType().Equals(typeof(iTable)))
                 {
                     foreach (var col in ((iTable)foot).Columns)
@@ -133,15 +143,23 @@ namespace PdfDesigner
             {
                 var nod = parentNode.Nodes.Add(((iColumn)col).Text);
                 nod.Tag = (iColumn)col;
+                nod.ToolTipText = "Right Click for Menu";
             }
             else if (col.GetType().Equals(typeof(iTable)))
             {
                 var nod = parentNode.Nodes.Add("Table");
                 nod.Tag = col;
+                nod.ToolTipText = "Right Click for Menu";
                 foreach (var columns in ((iTable)col).Columns)
                 {
                     LoadNode(columns, nod);
                 }
+            }
+            else if (col.GetType().Equals(typeof(iImage)))
+            {
+                var nod = parentNode.Nodes.Add("Image");
+                nod.Tag = (iImage)col;
+                nod.ToolTipText = "Right Click for Menu";
             }
 
         }
@@ -164,29 +182,36 @@ namespace PdfDesigner
                 if (string.IsNullOrEmpty(inv.Document.QueryParameter) == false)
                 {
                     string paramString = inv.Document.QueryParameter;
-                    if (inoicePrinting.DetailData == null || inoicePrinting.DetailData.Count() == 0)
-                    {
-                        jsonParam = OpenParameter_Dialog(paramString);
-                        var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam.ToUpper());
-                        dictParam = jobjParam.ToObject<Dictionary<string, object>>();
-                        inoicePrinting.InputParameters = dictParam;
-                        PrepareSqlReportData(inoicePrinting, inv, dictParam);
-                    }
-
-
+                    jsonParam = OpenParameter_Dialog(paramString);
+                    var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam.ToUpper());
+                    dictParam = jobjParam.ToObject<Dictionary<string, object>>();
+                    inoicePrinting.InputParameters = dictParam;
                 }
+                PrepareSqlReportData(inoicePrinting, inv, dictParam);
+                //if (string.IsNullOrEmpty(inv.Document.DetailSource))
+                //{
+                //    if (inoicePrinting.DetailData == null || inoicePrinting.DetailData.Count() == 0)
+                //    {
 
-                using(MemoryStream memoryStream = new MemoryStream())
+                        
+                //    }
+                //}
+
+
+
+
+
+                using (MemoryStream memoryStream = new MemoryStream())
                 {
-                    inoicePrinting.PrintInvoice(inv, DEST,memoryStream);
+                    inoicePrinting.PrintInvoice(inv, DEST, memoryStream);
 
                     Stream stream = new MemoryStream(memoryStream.ToArray());
                     pdfDocumentViewer1.LoadFromStream(stream);
                     //pdfDocumentViewer1.LoadFromFile(DEST);
                 }
-                
 
-               
+
+
             }
             catch (Exception ex)
             {
@@ -194,6 +219,8 @@ namespace PdfDesigner
                 MessageBox.Show(ex.Message);
             }
         }
+
+
         private void PrepareSqlReportData(InvoicePrinting invPrint, Invoice inv, IDictionary<string, object> param)
         {
             var constring = inv.Document.ConnectionString;
@@ -206,13 +233,19 @@ namespace PdfDesigner
                 IDictionary<string, object> reportData = null;
                 if (string.IsNullOrEmpty(reportQuery) == false)
                 {
-                    reportData = (IDictionary<string, object>)con.Query(reportQuery, param).FirstOrDefault();
-                    invPrint.ReportData = reportData;
+                    if (invPrint.ReportData != null)
+                    {
+                        reportData = (IDictionary<string, object>)con.Query(reportQuery, param).FirstOrDefault();
+                        invPrint.ReportData = reportData;
+                    }
                 }
                 if (string.IsNullOrEmpty(detailQuery) == false)
                 {
-                    List<IDictionary<string, object>> detailData = con.Query(detailQuery, param).Select(row => (IDictionary<string, object>)row).ToList();
-                    invPrint.DetailData = detailData;
+                    if (invPrint.DetailData != null)
+                    {
+                        List<IDictionary<string, object>> detailData = con.Query(detailQuery, param).Select(row => (IDictionary<string, object>)row).ToList();
+                        invPrint.DetailData = detailData;
+                    }
                 }
 
 
@@ -272,6 +305,10 @@ namespace PdfDesigner
             {
                 propertyGrid1.SelectedObject = (iTable)obj;
             }
+            else if (obj.GetType().Equals(typeof(iImage)))
+            {
+                propertyGrid1.SelectedObject = (iImage)obj;
+            }
             else
             {
                 propertyGrid1.SelectedObject = obj;
@@ -288,12 +325,13 @@ namespace PdfDesigner
                 LoadPropertyGrid(nod.Tag);
                 return;
             }
-            if (nod.Tag.GetType().Equals(typeof(iDocument)) || nod.Tag.GetType().Equals(typeof(iTable)) || nod.Tag.GetType().Equals(typeof(iDetail)) || nod.Tag.GetType().Equals(typeof(iFixedColTable)))
+            if (nod.Tag.GetType().Equals(typeof(iDocument)) || nod.Tag.GetType().Equals(typeof(iTable)) || nod.Tag.GetType().Equals(typeof(iDetail)) || nod.Tag.GetType().Equals(typeof(iFixedColTable)) || nod.Tag.GetType().Equals(typeof(iImage)))
             {
                 LoadPropertyGrid(nod.Tag);
+                return;
             }
 
-
+            LoadPropertyGrid(nod.Text);
 
         }
 
@@ -318,7 +356,7 @@ namespace PdfDesigner
                 if (treeView1.SelectedNode.Text == "Headers" || treeView1.SelectedNode.Text == "Footers")
                 {
                     CreateContextMenu();
-                    ShowContextMenuAddHeader(new string[] { "AddTable", "AddCellColumn" });
+                    ShowContextMenuAddHeader(new string[] { "AddTable", "AddCellColumn", "AddCellImange" });
                     treeView1.ContextMenuStrip = myContextMenuStrip;
                     myContextMenuStrip.Show(treeView1, e.Location);
                     return;
@@ -335,13 +373,13 @@ namespace PdfDesigner
                     }
                     if (tag.GetType().Equals(typeof(iTable)))
                     {
-                        if (treeView1.SelectedNode.Text == "Data" || treeView1.SelectedNode.Text=="Detail Header" || treeView1.SelectedNode.Text == "Detail Footer")
+                        if (treeView1.SelectedNode.Text == "Data" || treeView1.SelectedNode.Text == "Detail Header" || treeView1.SelectedNode.Text == "Detail Footer")
                         {
                             ShowContextMenuAddHeader(new string[] { "AddCellColumn" });
                         }
                         else
                         {
-                            ShowContextMenuAddHeader(new string[] { "AddCellColumn", "AddTable", "RemoveTable" });
+                            ShowContextMenuAddHeader(new string[] { "AddCellColumn", "AddCellImage", "AddTable", "RemoveTable" });
                         }
                         myContextMenuStrip.Show(treeView1, e.Location);
                     }
@@ -358,6 +396,12 @@ namespace PdfDesigner
                     if (tag.GetType().Equals(typeof(iColumn)))
                     {
                         ShowContextMenuAddHeader(new string[] { "RemoveCellColumn" });
+                        myContextMenuStrip.Show(treeView1, e.Location);
+                    }
+
+                    if (tag.GetType().Equals(typeof(iImage)))
+                    {
+                        ShowContextMenuAddHeader(new string[] { "RemoveCellImage" });
                         myContextMenuStrip.Show(treeView1, e.Location);
                     }
                     //if (tag.GetType().Equals(typeof(itablec)))
@@ -426,6 +470,24 @@ namespace PdfDesigner
 
 
             }
+            if (menuItem.Name == "AddCellImage")
+            {
+                iTable header = treeView1.SelectedNode.Tag as iTable;
+                if (header != null)
+                {
+                    string filename = GetImageFile();
+                    if (filename == "") return;
+                    var col = inv.NewImage(header, filename);
+                    var newnod = selectedNod.Nodes.Add("Image");
+                    newnod.Tag = col;
+                    treeView1.SelectedNode = newnod;
+                    newnod.EnsureVisible();
+                    treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
+                    //LoadTree();
+                }
+
+
+            }
             if (menuItem.Name == "RemoveTable")
             {
                 var currenNod = treeView1.SelectedNode;
@@ -474,11 +536,51 @@ namespace PdfDesigner
 
 
             }
+
+            if (menuItem.Name == "RemoveCellImage")
+            {
+                var currenNod = treeView1.SelectedNode;
+                iImage headerColumn = currenNod.Tag as iImage;
+                iTable header = currenNod.Parent.Tag as iTable;
+                if (header != null)
+                {
+                    if (headerColumn != null)
+                    {
+                        if (inv.RemoveImage(header, headerColumn) == true)
+                        {
+                            currenNod.Remove();
+                            var newnod = treeView1.SelectedNode;
+                            treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
+                            //LoadTree();
+                        }
+
+                    }
+                }
+
+
+            }
             //if (menuItem == "AddCsvData")
             //{
 
             //}
 
+        }
+
+        private string GetImageFile()
+        {
+            try
+            {
+                openFileDialog1.Filter = "JPG|*.jpg|PNG|*.png|BMP|*.bmp";
+                if (openFileDialog1.ShowDialog() == DialogResult.OK)
+                {
+                    return openFileDialog1.FileName;
+                }
+                return "";
+            }
+            catch
+            {
+                return "";
+            }
         }
         private void CreateContextMenu()
 
@@ -511,14 +613,21 @@ namespace PdfDesigner
 
             menuItem.Name = "RemoveCellColumn";
             myContextMenuStrip.Items.Add(menuItem);
+
             menuItem = new ToolStripMenuItem("Refresh");
-
             menuItem.Click += new EventHandler(menuItem_Click);
-
             menuItem.Name = "Refresh";
             myContextMenuStrip.Items.Add(menuItem);
             //this.ContextMenuStrip = myContextMenuStrip;
+            menuItem = new ToolStripMenuItem("Add Image");
+            menuItem.Click += new EventHandler(menuItem_Click);
+            menuItem.Name = "AddCellImage";
+            myContextMenuStrip.Items.Add(menuItem);
 
+            menuItem = new ToolStripMenuItem("Remove Image");
+            menuItem.Click += new EventHandler(menuItem_Click);
+            menuItem.Name = "RemoveCellImage";
+            myContextMenuStrip.Items.Add(menuItem);
 
         }
         private void ShowContextMenuAddHeader(string[] menus)
@@ -653,7 +762,7 @@ namespace PdfDesigner
 
 
                     inoicePrinting = new InvoicePrinting();
-                    inv = inoicePrinting.LoadInvFromJson(str);
+                    inv = inoicePrinting.LoadInvFromJsonString(str);
                     LoadTree();
                     LoadPdf();
                 }
@@ -729,10 +838,10 @@ namespace PdfDesigner
                     inoicePrinting.PrintInvoice(inv, saveFileDialog1.FileName);
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
 
-                throw;
+                MessageBox.Show(ex.Message);
             }
         }
     }

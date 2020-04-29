@@ -10,7 +10,7 @@ using Newtonsoft.Json.Linq;
 
 namespace WebReport.Controllers
 {
-    [Route("api/[controller]")]
+    //[Route("api/[controller]")]
     [ApiController]
     public class PdfController : ControllerBase
     {
@@ -22,6 +22,7 @@ namespace WebReport.Controllers
         }
 
         [HttpPost]
+        [Route("api/Pdf")]
         public IActionResult getpdf(PdfReportParameter rptParameter)
         {
             //var rparam = JsonConvert.DeserializeObject<PdfReportParameter>(rptParameter.ToString());
@@ -30,7 +31,33 @@ namespace WebReport.Controllers
             if (res.status  == "ok")
             {
                 MemoryStream memStream = new MemoryStream((byte[])res.result);
-                return File((byte[])res.result, "application/pdf", "pdf1.pdf");
+                return File((byte[])res.result, "application/pdf", "singlePdf.pdf");
+            }
+            return new BadRequestObjectResult(res);
+        }
+
+        [HttpPost]
+        [Route("api/MultiparameterPdf")]
+        public IActionResult getMultiParamterPdf(PdfReportMultiParameter reportMultiParameter)
+        {
+            var res = pdfConverter.OpenPdfReportMultipleParameter(reportMultiParameter);
+            if (res.status == "ok")
+            {
+                MemoryStream memStream = new MemoryStream((byte[])res.result);
+                return File((byte[])res.result, "application/pdf", "MultiParameter.pdf");
+            }
+            return new BadRequestObjectResult(res);
+        }
+
+        [HttpPost]
+        [Route("api/MultiplePdf")]
+        public IActionResult getMultiPdf(List<PdfReportParameter> multplepdf)
+        {
+            var res = pdfConverter.OpenMultiplePdfReport(multplepdf);
+            if (res.status == "ok")
+            {
+                MemoryStream memStream = new MemoryStream((byte[])res.result);
+                return File((byte[])res.result, "application/pdf", "Multiple.pdf");
             }
             return new BadRequestObjectResult(res);
         }
