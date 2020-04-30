@@ -878,20 +878,25 @@ namespace PDfCreator.Print
             //get the value from the ReportSouce queried 
             if (col.InLineParameter == true)
             {
-                int startIndex = 0;
+                int startIndex =0;
                 string LinText = col.Text;
-                while (startIndex >0 && startIndex  < LinText.Length)
+                while (startIndex >-1 && startIndex  < LinText.Length)
                 {
-                    startIndex =LinText.IndexOf('$');
-                    if(startIndex >0 && startIndex  < LinText.Length)
+                    startIndex =LinText.IndexOf('$',startIndex+1);
+                    if(startIndex >-1 && startIndex  < LinText.Length)
                     {
                         int nextIndex = LinText.IndexOf(' ', startIndex + 1);
-                        string txtVariable = LinText.Substring(startIndex, nextIndex);
+                        if (nextIndex == -1) nextIndex = LinText.Length;
+                        string txtVariable = LinText.Substring(startIndex, nextIndex-startIndex);
                         var key = txtVariable.Substring(1);
-                        var txt = this.ReportData[key];
-                        string textToReplace = txt == null ? txtVariable : txt.ToString() == "" ? txtVariable : txt.ToString();
-                        LinText.Replace(txtVariable, textToReplace);
-
+                        try
+                        {
+                            var txt = this.ReportData[key];
+                            string textToReplace = txt == null ? txtVariable : txt.ToString() == "" ? txtVariable : txt.ToString();
+                            LinText =LinText.Replace(txtVariable, textToReplace);
+                        }
+                        catch { }
+                        startIndex = nextIndex;
                     }
                 }
                 return LinText;

@@ -178,14 +178,16 @@ namespace PdfDesigner
                 FileInfo file = new FileInfo(DEST);
                 string jsonParam = "";
                 IDictionary<string, object> dictParam = new Dictionary<string, object>();
-
-                if (string.IsNullOrEmpty(inv.Document.QueryParameter) == false)
+                if (inoicePrinting.InputParameters == null)
                 {
-                    string paramString = inv.Document.QueryParameter;
-                    jsonParam = OpenParameter_Dialog(paramString);
-                    var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam.ToUpper());
-                    dictParam = jobjParam.ToObject<Dictionary<string, object>>();
-                    inoicePrinting.InputParameters = dictParam;
+                    if (string.IsNullOrEmpty(inv.Document.QueryParameter) == false)
+                    {
+                        string paramString = inv.Document.QueryParameter;
+                        jsonParam = OpenParameter_Dialog(paramString);
+                        var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam);
+                        dictParam = jobjParam.ToObject<Dictionary<string, object>>();
+                        inoicePrinting.InputParameters = dictParam;
+                    }
                 }
                 PrepareSqlReportData(inoicePrinting, inv, dictParam);
                 //if (string.IsNullOrEmpty(inv.Document.DetailSource))
@@ -233,7 +235,7 @@ namespace PdfDesigner
                 IDictionary<string, object> reportData = null;
                 if (string.IsNullOrEmpty(reportQuery) == false)
                 {
-                    if (invPrint.ReportData != null)
+                    if (invPrint.ReportData == null)
                     {
                         reportData = (IDictionary<string, object>)con.Query(reportQuery, param).FirstOrDefault();
                         invPrint.ReportData = reportData;
@@ -695,7 +697,7 @@ namespace PdfDesigner
             {
                 var jsonParam = OpenParameter_Dialog(inv.Document.QueryParameter);
                 if (jsonParam == "") return;
-                var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam.ToUpper());
+                var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam);
                 var dictParam = jobjParam.ToObject<Dictionary<string, object>>();
                 inoicePrinting.InputParameters = dictParam;
                 PrepareSqlReportData(inoicePrinting, inv, dictParam);
