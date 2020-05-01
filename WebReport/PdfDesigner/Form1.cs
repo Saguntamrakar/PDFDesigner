@@ -243,7 +243,7 @@ namespace PdfDesigner
                 }
                 if (string.IsNullOrEmpty(detailQuery) == false)
                 {
-                    if (invPrint.DetailData != null)
+                    if (invPrint.DetailData == null)
                     {
                         List<IDictionary<string, object>> detailData = con.Query(detailQuery, param).Select(row => (IDictionary<string, object>)row).ToList();
                         invPrint.DetailData = detailData;
