@@ -61,5 +61,6 @@ namespace WebReport.Controllers
             }
             return new BadRequestObjectResult(res);
         }
+
     }
 }

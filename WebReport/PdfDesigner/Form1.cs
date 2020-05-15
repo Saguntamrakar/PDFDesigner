@@ -19,6 +19,8 @@ using System.Reflection;
 using PDfCreator.Print;
 using PDfCreator.Models;
 using Dapper;
+using RawPrint;
+
 namespace PdfDesigner
 {
     public partial class Form1 : Form
@@ -26,6 +28,13 @@ namespace PdfDesigner
         Invoice inv;
         ContextMenuStrip myContextMenuStrip;
         InvoicePrinting inoicePrinting;
+        private CutObject CutItem = null;
+        private class CutObject
+        {
+            public int CutObjIndex { get; set; }
+            public iTable CutParentobj { get; set; }
+            public TreeNode CutNode { get; set; }
+        }
         public Form1()
         {
             InitializeComponent();
@@ -36,6 +45,10 @@ namespace PdfDesigner
         {
             inv = new Invoice();
             inoicePrinting = new InvoicePrinting();
+            foreach(string printername in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
+            {
+                this.Printers.Items.Add(printername);
+            }
         }
         private void LoadTree()
         {
@@ -163,10 +176,12 @@ namespace PdfDesigner
             }
 
         }
-        private void LoadPdf(string ExportFileName = "")
+        private Stream LoadPdf(string ExportFileName = "")
         {
+            Stream stream = new MemoryStream();
             try
             {
+                
                 string DEST = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test1.pdf");
                 if (string.IsNullOrEmpty(ExportFileName))
                 {
@@ -195,7 +210,7 @@ namespace PdfDesigner
                 //    if (inoicePrinting.DetailData == null || inoicePrinting.DetailData.Count() == 0)
                 //    {
 
-                        
+
                 //    }
                 //}
 
@@ -207,18 +222,19 @@ namespace PdfDesigner
                 {
                     inoicePrinting.PrintInvoice(inv, DEST, memoryStream);
 
-                    Stream stream = new MemoryStream(memoryStream.ToArray());
+                    stream = new MemoryStream(memoryStream.ToArray());
                     pdfDocumentViewer1.LoadFromStream(stream);
                     //pdfDocumentViewer1.LoadFromFile(DEST);
                 }
 
-
+                return stream;
 
             }
             catch (Exception ex)
             {
-
+                
                 MessageBox.Show(ex.Message);
+                return stream;
             }
         }
 
@@ -358,7 +374,7 @@ namespace PdfDesigner
                 if (treeView1.SelectedNode.Text == "Headers" || treeView1.SelectedNode.Text == "Footers")
                 {
                     CreateContextMenu();
-                    ShowContextMenuAddHeader(new string[] { "AddTable", "AddCellColumn", "AddCellImange" });
+                    ShowContextMenuAddHeader(new string[] { "AddTable", "AddCellColumn", "AddCellImange" }, null);
                     treeView1.ContextMenuStrip = myContextMenuStrip;
                     myContextMenuStrip.Show(treeView1, e.Location);
                     return;
@@ -377,11 +393,11 @@ namespace PdfDesigner
                     {
                         if (treeView1.SelectedNode.Text == "Data" || treeView1.SelectedNode.Text == "Detail Header" || treeView1.SelectedNode.Text == "Detail Footer")
                         {
-                            ShowContextMenuAddHeader(new string[] { "AddCellColumn" });
+                            ShowContextMenuAddHeader(new string[] { "AddCellColumn" }, tag);
                         }
                         else
                         {
-                            ShowContextMenuAddHeader(new string[] { "AddCellColumn", "AddCellImage", "AddTable", "RemoveTable" });
+                            ShowContextMenuAddHeader(new string[] { "AddCellColumn", "AddCellImage", "AddTable", "RemoveTable", "Cut", "Paste" }, tag);
                         }
                         myContextMenuStrip.Show(treeView1, e.Location);
                     }
@@ -397,13 +413,13 @@ namespace PdfDesigner
                     //}
                     if (tag.GetType().Equals(typeof(iColumn)))
                     {
-                        ShowContextMenuAddHeader(new string[] { "RemoveCellColumn" });
+                        ShowContextMenuAddHeader(new string[] { "Cut", "Paste", "RemoveCellColumn" }, tag);
                         myContextMenuStrip.Show(treeView1, e.Location);
                     }
 
                     if (tag.GetType().Equals(typeof(iImage)))
                     {
-                        ShowContextMenuAddHeader(new string[] { "RemoveCellImage" });
+                        ShowContextMenuAddHeader(new string[] { "RemoveCellImage" }, tag);
                         myContextMenuStrip.Show(treeView1, e.Location);
                     }
                     //if (tag.GetType().Equals(typeof(itablec)))
@@ -420,152 +436,214 @@ namespace PdfDesigner
         void menuItem_Click(object sender, EventArgs e)
 
         {
-            TreeNode selectedNod = treeView1.SelectedNode;
-            var tag = selectedNod.Tag;
-            ToolStripItem menuItem = (ToolStripItem)sender;
-
-            if (menuItem.Name == "AddTable")
-
+            try
             {
-                if (tag != null)
+                TreeNode selectedNod = treeView1.SelectedNode;
+                var tag = selectedNod.Tag;
+                ToolStripItem menuItem = (ToolStripItem)sender;
+
+                if (menuItem.Name == "AddTable")
+
                 {
-                    if (tag.GetType().Equals(typeof(ArrayList)))
+                    if (tag != null)
                     {
-                        var parent = (ArrayList)tag;
-                        var newtable = inv.NewTable(parent);
-                        var newnod = selectedNod.Nodes.Add("Table");
-                        newnod.Tag = newtable;
+                        if (tag.GetType().Equals(typeof(ArrayList)))
+                        {
+                            var parent = (ArrayList)tag;
+                            var newtable = inv.NewTable(parent);
+                            var newnod = selectedNod.Nodes.Add("Table");
+                            newnod.Tag = newtable;
+                            treeView1.SelectedNode = newnod;
+                            newnod.EnsureVisible();
+                            treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
+                            return;
+                        }
+                        if (tag.GetType().Equals(typeof(iTable)))
+                        {
+                            var parent = (iTable)tag;
+                            var newtable = inv.NewTable(parent.Columns);
+                            var newnod = selectedNod.Nodes.Add("Table");
+                            newnod.Tag = newtable;
+                            treeView1.SelectedNode = newnod;
+                            newnod.EnsureVisible();
+                            treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
+                            return;
+                        }
+
+                    }
+
+
+                }
+                if (menuItem.Name == "AddCellColumn")
+                {
+                    iTable header = treeView1.SelectedNode.Tag as iTable;
+                    if (header != null)
+                    {
+                        var col = inv.NewColumn(header);
+                        var newnod = selectedNod.Nodes.Add(col.Text);
+                        newnod.Tag = col;
                         treeView1.SelectedNode = newnod;
                         newnod.EnsureVisible();
                         treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
-                        return;
+                        //LoadTree();
                     }
-                    if (tag.GetType().Equals(typeof(iTable)))
+
+
+                }
+                if (menuItem.Name == "AddCellImage")
+                {
+                    iTable header = treeView1.SelectedNode.Tag as iTable;
+                    if (header != null)
                     {
-                        var parent = (iTable)tag;
-                        var newtable = inv.NewTable(parent.Columns);
-                        var newnod = selectedNod.Nodes.Add("Table");
-                        newnod.Tag = newtable;
+                        string filename = GetImageFile();
+                        if (filename == "") return;
+                        var col = inv.NewImage(header, filename);
+                        var newnod = selectedNod.Nodes.Add("Image");
+                        newnod.Tag = col;
                         treeView1.SelectedNode = newnod;
                         newnod.EnsureVisible();
                         treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
-                        return;
+                        //LoadTree();
                     }
 
+
                 }
-
-
-            }
-            if (menuItem.Name == "AddCellColumn")
-            {
-                iTable header = treeView1.SelectedNode.Tag as iTable;
-                if (header != null)
+                if (menuItem.Name == "RemoveTable")
                 {
-                    var col = inv.NewColumn(header);
-                    var newnod = selectedNod.Nodes.Add(col.Text);
-                    newnod.Tag = col;
-                    treeView1.SelectedNode = newnod;
-                    newnod.EnsureVisible();
-                    treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
-                    //LoadTree();
-                }
-
-
-            }
-            if (menuItem.Name == "AddCellImage")
-            {
-                iTable header = treeView1.SelectedNode.Tag as iTable;
-                if (header != null)
-                {
-                    string filename = GetImageFile();
-                    if (filename == "") return;
-                    var col = inv.NewImage(header, filename);
-                    var newnod = selectedNod.Nodes.Add("Image");
-                    newnod.Tag = col;
-                    treeView1.SelectedNode = newnod;
-                    newnod.EnsureVisible();
-                    treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
-                    //LoadTree();
-                }
-
-
-            }
-            if (menuItem.Name == "RemoveTable")
-            {
-                var currenNod = treeView1.SelectedNode;
-                iTable header = currenNod.Tag as iTable;
-                var parentNod = currenNod.Parent;
-                var parent = parentNod.Tag;
-                if (header != null)
-                {
-                    if (parent.GetType().Equals(typeof(iTable)))
+                    var currenNod = treeView1.SelectedNode;
+                    iTable header = currenNod.Tag as iTable;
+                    var parentNod = currenNod.Parent;
+                    var parent = parentNod.Tag;
+                    if (header != null)
                     {
-                        if (inv.RemoveTable(header, ((iTable)parent).Columns) == true)
+                        if (parent.GetType().Equals(typeof(iTable)))
                         {
-                            currenNod.Remove();
+                            if (inv.RemoveTable(header, ((iTable)parent).Columns) == true)
+                            {
+                                currenNod.Remove();
+                            }
                         }
-                    }
-                    else
-                    {
-                        if (inv.RemoveTable(header, parent) == true)
+                        else
                         {
-                            currenNod.Remove();
+                            if (inv.RemoveTable(header, parent) == true)
+                            {
+                                currenNod.Remove();
+                            }
+                        }
+
+                        //LoadTree();
+                    }
+                }
+                if (menuItem.Name == "RemoveCellColumn")
+                {
+                    var currenNod = treeView1.SelectedNode;
+                    iColumn headerColumn = currenNod.Tag as iColumn;
+                    iTable header = currenNod.Parent.Tag as iTable;
+                    if (header != null)
+                    {
+                        if (headerColumn != null)
+                        {
+                            if (inv.RemoveColumn(header, headerColumn) == true)
+                            {
+                                currenNod.Remove();
+                                var newnod = treeView1.SelectedNode;
+                                treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
+                                //LoadTree();
+                            }
+
                         }
                     }
 
-                    //LoadTree();
+
                 }
-            }
-            if (menuItem.Name == "RemoveCellColumn")
-            {
-                var currenNod = treeView1.SelectedNode;
-                iColumn headerColumn = currenNod.Tag as iColumn;
-                iTable header = currenNod.Parent.Tag as iTable;
-                if (header != null)
+
+                if (menuItem.Name == "RemoveCellImage")
                 {
-                    if (headerColumn != null)
+                    var currenNod = treeView1.SelectedNode;
+                    iImage headerColumn = currenNod.Tag as iImage;
+                    iTable header = currenNod.Parent.Tag as iTable;
+                    if (header != null)
                     {
-                        if (inv.RemoveColumn(header, headerColumn) == true)
+                        if (headerColumn != null)
                         {
-                            currenNod.Remove();
-                            var newnod = treeView1.SelectedNode;
-                            treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
-                            //LoadTree();
-                        }
+                            if (inv.RemoveImage(header, headerColumn) == true)
+                            {
+                                currenNod.Remove();
+                                var newnod = treeView1.SelectedNode;
+                                treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
+                                //LoadTree();
+                            }
 
+                        }
                     }
+
+
                 }
 
-
-            }
-
-            if (menuItem.Name == "RemoveCellImage")
-            {
-                var currenNod = treeView1.SelectedNode;
-                iImage headerColumn = currenNod.Tag as iImage;
-                iTable header = currenNod.Parent.Tag as iTable;
-                if (header != null)
+                if (menuItem.Name == "Cut")
                 {
-                    if (headerColumn != null)
-                    {
-                        if (inv.RemoveImage(header, headerColumn) == true)
-                        {
-                            currenNod.Remove();
-                            var newnod = treeView1.SelectedNode;
-                            treeView1_NodeMouseClick(treeView1, new TreeNodeMouseClickEventArgs(newnod, MouseButtons.Left, 1, 0, 0));
-                            //LoadTree();
-                        }
+                    var currenNod = treeView1.SelectedNode;
+                    if (currenNod.Tag == null) { CutItem = null; return; };
 
-                    }
+                    var parrentNod = currenNod.Parent;
+                    iTable parentTable = parrentNod.Tag as iTable;
+                    if (parentTable == null) return;
+                    var ind = parentTable.Columns.IndexOf(currenNod.Tag);
+
+                    CutItem = new CutObject() { CutNode = currenNod, CutObjIndex = ind, CutParentobj = parentTable };
+
+
                 }
 
+                if (menuItem.Name == "Paste")
+                {
+                    var currenNod = treeView1.SelectedNode;
+                    if (currenNod.Tag == null) throw new Exception("selected item is null");
+                    if (CutItem == null) throw new Exception("Cut item not found");
+                    var parentNod = treeView1.SelectedNode.Parent;
+                    var parentItem = parentNod.Tag;
+                    if (parentItem == null) throw new Exception("Parent is not found");
+                    //if (parentNod.Text == "Data") throw new Exception("Data section cannot be pasted");
+                    //if (!CutItem.CutObj.GetType().Equals(currenNod.Tag.GetType())) throw new Exception("Cut item and paste item do not match");
+                    var CutObj = CutItem.CutParentobj.Columns[CutItem.CutObjIndex];
+                    if (CutObj.GetType().Equals(typeof(iColumn)) || CutObj.GetType().Equals(typeof(iTable)))
+                    {
+                        if (CutObj.GetType().Equals(typeof(iTable)) && (parentNod.Text=="Detail Header" || parentNod.Text == "Detail Footer" || parentNod.Text == "Data"))
+                        {
+                            throw new Exception("Table cannot be paste here");
+                        }
+                        //{
+                        var parenttbl = parentItem as iTable;
+                        if (parenttbl == null) throw new Exception("Parent is not a table");
+                        
+                        CutItem.CutParentobj.Columns.RemoveAt(CutItem.CutObjIndex);
+                        var arrayIndex = parenttbl.Columns.IndexOf(currenNod.Tag);
+                        parenttbl.Columns.Insert(arrayIndex, CutObj);
+                        var nodIndex = selectedNod.Index;
+                        string text = CutObj.GetType().Equals(typeof(iColumn)) ? ((iColumn)CutObj).Text : "Table";
+                        var insertedNod = parentNod.Nodes.Insert(nodIndex, text);
+                        insertedNod.Tag = CutObj;
+                        CutItem.CutNode.Parent.Nodes.Remove(CutItem.CutNode);
+                        CutItem = null;
 
+                        //}
+                    }
+
+                    //if (currenNod.Tag.GetType().Equals(typeof(iTable)))
+                    //{
+                    //    CutObject = currenNod.Tag as iTable;
+                    //}
+
+
+
+
+                }
             }
-            //if (menuItem == "AddCsvData")
-            //{
+            catch (Exception ex)
+            {
 
-            //}
-
+                MessageBox.Show(ex.Message);
+            }
         }
 
         private string GetImageFile()
@@ -631,8 +709,18 @@ namespace PdfDesigner
             menuItem.Name = "RemoveCellImage";
             myContextMenuStrip.Items.Add(menuItem);
 
+            menuItem = new ToolStripMenuItem("Cut");
+            menuItem.Click += new EventHandler(menuItem_Click);
+            menuItem.Name = "Cut";
+            myContextMenuStrip.Items.Add(menuItem);
+
+            menuItem = new ToolStripMenuItem("Paste");
+            menuItem.Click += new EventHandler(menuItem_Click);
+            menuItem.Name = "Paste";
+            myContextMenuStrip.Items.Add(menuItem);
+
         }
-        private void ShowContextMenuAddHeader(string[] menus)
+        private void ShowContextMenuAddHeader(string[] menus, object sender)
 
         {
             foreach (ToolStripMenuItem itm in myContextMenuStrip.Items)
@@ -640,12 +728,24 @@ namespace PdfDesigner
                 if (!menus.Contains(itm.Name))
                 {
                     itm.Visible = false;
+
                 }
                 else
                 {
                     itm.Visible = true;
+                    if (itm.Name == "Paste")
+                    {
+                        itm.Visible = false;
+                        if (CutItem != null)
+                        {
+                            itm.Visible = true;
+                        }
+                    }
+
                 }
+
             }
+
 
 
         }
@@ -845,6 +945,14 @@ namespace PdfDesigner
 
                 MessageBox.Show(ex.Message);
             }
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            string printername = this.Printers.SelectedItem as string ;
+            if (string.IsNullOrEmpty(printername)) printername = System.Drawing.Printing.PrinterSettings.InstalledPrinters[0];
+            Stream stream = LoadPdf();
+            Printer.PrintStream(printername, stream, "pdfdocument");
         }
     }
 

@@ -228,6 +228,7 @@ namespace PDfCreator.Models
         public string Padding { get; set; }
         public int ColSpan { get; set; }
         public int RowSpan { get; set; }
+        public float Width { get; set; }
         public iColumnArrayUnit ColumnArrayUnit { get; set; } = iColumnArrayUnit.PercentArray;
         public iTable()
         {

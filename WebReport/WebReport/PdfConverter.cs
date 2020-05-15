@@ -10,7 +10,7 @@ using ImsPosLibraryCore.Models;
 using Microsoft.AspNetCore.Hosting;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using Dapper;
 using System.Text.Json;
 
@@ -79,7 +79,7 @@ namespace WebReport
                         FunctionResponse res = CompareParameter(parameter, inv.Document.QueryParameter);
                         if (res.status == "error") return res;
                         inoicePrinting.InputParameters = res.result as Dictionary<string, object>;
-                        if (pdfReportMultiParameter.IsSameDataQuery == true && inoicePrinting.DetailData !=null ) 
+                        if (!(pdfReportMultiParameter.IsSameDataQuery == true && inoicePrinting.DetailData !=null )) 
                         { PrepareSqlReportData(inoicePrinting, inv, inoicePrinting.InputParameters); }
                     }
                     using (MemoryStream memStream = new MemoryStream())

@@ -5,7 +5,7 @@
 *.suo
 *.user
 *.sln.docstates
-#*.csproj
+
 
 # Build results
 
@@ -53,10 +53,10 @@ build/
 *.pidb
 *.log
 *.scc
-#*.sln
+
 
 #projfile
-#/*.csproj
+
 
 # OS generated files #
 .DS_Store*

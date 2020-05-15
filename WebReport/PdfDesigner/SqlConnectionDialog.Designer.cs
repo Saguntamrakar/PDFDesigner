@@ -48,11 +48,12 @@
             this.button1.TabIndex = 0;
             this.button1.Text = "Save";
             this.button1.UseVisualStyleBackColor = true;
+            this.button1.UseWaitCursor = true;
             this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // button2
             // 
-            this.button2.Cursor = System.Windows.Forms.Cursors.No;
+            this.button2.Cursor = System.Windows.Forms.Cursors.WaitCursor;
             this.button2.DialogResult = System.Windows.Forms.DialogResult.Cancel;
             this.button2.Location = new System.Drawing.Point(767, 479);
             this.button2.Name = "button2";
@@ -60,6 +61,7 @@
             this.button2.TabIndex = 1;
             this.button2.Text = "Cancel";
             this.button2.UseVisualStyleBackColor = true;
+            this.button2.UseWaitCursor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
             // label1
@@ -70,6 +72,7 @@
             this.label1.Size = new System.Drawing.Size(136, 20);
             this.label1.TabIndex = 2;
             this.label1.Text = "Connection String";
+            this.label1.UseWaitCursor = true;
             // 
             // label2
             // 
@@ -79,6 +82,7 @@
             this.label2.Size = new System.Drawing.Size(104, 20);
             this.label2.TabIndex = 3;
             this.label2.Text = "Report Query";
+            this.label2.UseWaitCursor = true;
             // 
             // label3
             // 
@@ -88,6 +92,7 @@
             this.label3.Size = new System.Drawing.Size(96, 20);
             this.label3.TabIndex = 4;
             this.label3.Text = "Detail Query";
+            this.label3.UseWaitCursor = true;
             // 
             // txtConnectionString
             // 
@@ -96,6 +101,7 @@
             this.txtConnectionString.Name = "txtConnectionString";
             this.txtConnectionString.Size = new System.Drawing.Size(678, 56);
             this.txtConnectionString.TabIndex = 5;
+            this.txtConnectionString.UseWaitCursor = true;
             // 
             // txtDetailQuery
             // 
@@ -104,6 +110,7 @@
             this.txtDetailQuery.Name = "txtDetailQuery";
             this.txtDetailQuery.Size = new System.Drawing.Size(678, 133);
             this.txtDetailQuery.TabIndex = 7;
+            this.txtDetailQuery.UseWaitCursor = true;
             // 
             // txtReportQuery
             // 
@@ -112,6 +119,7 @@
             this.txtReportQuery.Name = "txtReportQuery";
             this.txtReportQuery.Size = new System.Drawing.Size(678, 110);
             this.txtReportQuery.TabIndex = 9;
+            this.txtReportQuery.UseWaitCursor = true;
             // 
             // label4
             // 
@@ -121,6 +129,7 @@
             this.label4.Size = new System.Drawing.Size(91, 20);
             this.label4.TabIndex = 10;
             this.label4.Text = "Parameters";
+            this.label4.UseWaitCursor = true;
             // 
             // txtParameter
             // 
@@ -129,6 +138,7 @@
             this.txtParameter.Name = "txtParameter";
             this.txtParameter.Size = new System.Drawing.Size(678, 106);
             this.txtParameter.TabIndex = 11;
+            this.txtParameter.UseWaitCursor = true;
             // 
             // SqlConnectionDialog
             // 
@@ -147,6 +157,7 @@
             this.Controls.Add(this.label1);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.button1);
+            this.Cursor = System.Windows.Forms.Cursors.WaitCursor;
             this.KeyPreview = true;
             this.MaximizeBox = false;
             this.MinimizeBox = false;

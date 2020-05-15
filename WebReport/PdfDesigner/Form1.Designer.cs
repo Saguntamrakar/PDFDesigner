@@ -34,6 +34,9 @@
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.propertyGrid1 = new System.Windows.Forms.PropertyGrid();
             this.splitContainer3 = new System.Windows.Forms.SplitContainer();
+            this.Printers = new System.Windows.Forms.ComboBox();
+            this.Print = new System.Windows.Forms.Button();
+            this.label1 = new System.Windows.Forms.Label();
             this.button2 = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.Open = new System.Windows.Forms.Button();
@@ -42,7 +45,6 @@
             this.pdfDocumentViewer1 = new Spire.PdfViewer.Forms.PdfDocumentViewer();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
-            this.label1 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -79,8 +81,8 @@
             // splitContainer1.Panel2
             // 
             this.splitContainer1.Panel2.Controls.Add(this.splitContainer3);
-            this.splitContainer1.Size = new System.Drawing.Size(934, 450);
-            this.splitContainer1.SplitterDistance = 311;
+            this.splitContainer1.Size = new System.Drawing.Size(1219, 450);
+            this.splitContainer1.SplitterDistance = 405;
             this.splitContainer1.TabIndex = 0;
             // 
             // splitContainer2
@@ -98,7 +100,7 @@
             // splitContainer2.Panel2
             // 
             this.splitContainer2.Panel2.Controls.Add(this.propertyGrid1);
-            this.splitContainer2.Size = new System.Drawing.Size(311, 450);
+            this.splitContainer2.Size = new System.Drawing.Size(405, 450);
             this.splitContainer2.SplitterDistance = 172;
             this.splitContainer2.TabIndex = 0;
             // 
@@ -107,7 +109,7 @@
             this.treeView1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.treeView1.Location = new System.Drawing.Point(0, 0);
             this.treeView1.Name = "treeView1";
-            this.treeView1.Size = new System.Drawing.Size(309, 170);
+            this.treeView1.Size = new System.Drawing.Size(403, 170);
             this.treeView1.TabIndex = 1;
             this.treeView1.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView1_NodeMouseClick);
             this.treeView1.MouseUp += new System.Windows.Forms.MouseEventHandler(this.treeView1MouseUp);
@@ -117,7 +119,7 @@
             this.propertyGrid1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.propertyGrid1.Location = new System.Drawing.Point(0, 0);
             this.propertyGrid1.Name = "propertyGrid1";
-            this.propertyGrid1.Size = new System.Drawing.Size(309, 272);
+            this.propertyGrid1.Size = new System.Drawing.Size(403, 272);
             this.propertyGrid1.TabIndex = 0;
             this.propertyGrid1.PropertyValueChanged += new System.Windows.Forms.PropertyValueChangedEventHandler(this.propertyGrid1_PropertyValueChanged);
             // 
@@ -131,6 +133,8 @@
             // 
             // splitContainer3.Panel1
             // 
+            this.splitContainer3.Panel1.Controls.Add(this.Printers);
+            this.splitContainer3.Panel1.Controls.Add(this.Print);
             this.splitContainer3.Panel1.Controls.Add(this.label1);
             this.splitContainer3.Panel1.Controls.Add(this.button2);
             this.splitContainer3.Panel1.Controls.Add(this.button1);
@@ -141,9 +145,36 @@
             // splitContainer3.Panel2
             // 
             this.splitContainer3.Panel2.Controls.Add(this.pdfDocumentViewer1);
-            this.splitContainer3.Size = new System.Drawing.Size(617, 448);
+            this.splitContainer3.Size = new System.Drawing.Size(808, 448);
             this.splitContainer3.SplitterDistance = 66;
             this.splitContainer3.TabIndex = 0;
+            // 
+            // Printers
+            // 
+            this.Printers.FormattingEnabled = true;
+            this.Printers.Location = new System.Drawing.Point(610, 24);
+            this.Printers.Name = "Printers";
+            this.Printers.Size = new System.Drawing.Size(187, 28);
+            this.Printers.TabIndex = 9;
+            // 
+            // Print
+            // 
+            this.Print.Location = new System.Drawing.Point(540, 18);
+            this.Print.Name = "Print";
+            this.Print.Size = new System.Drawing.Size(50, 37);
+            this.Print.TabIndex = 8;
+            this.Print.Text = "button3";
+            this.Print.UseVisualStyleBackColor = true;
+            this.Print.Click += new System.EventHandler(this.button3_Click);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(21, 55);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(239, 20);
+            this.label1.TabIndex = 7;
+            this.label1.Text = "Right Click on Treeview for menu";
             // 
             // button2
             // 
@@ -202,7 +233,7 @@
             this.pdfDocumentViewer1.Location = new System.Drawing.Point(0, 0);
             this.pdfDocumentViewer1.MultiPagesThreshold = 60;
             this.pdfDocumentViewer1.Name = "pdfDocumentViewer1";
-            this.pdfDocumentViewer1.Size = new System.Drawing.Size(617, 378);
+            this.pdfDocumentViewer1.Size = new System.Drawing.Size(808, 378);
             this.pdfDocumentViewer1.TabIndex = 1;
             this.pdfDocumentViewer1.Text = "pdfDocumentViewer1";
             this.pdfDocumentViewer1.Threshold = 60;
@@ -212,20 +243,11 @@
             // 
             this.openFileDialog1.FileName = "openFileDialog1";
             // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(21, 55);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(51, 20);
-            this.label1.TabIndex = 7;
-            this.label1.Text = "Right Click on Treeview for menu";
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(934, 450);
+            this.ClientSize = new System.Drawing.Size(1219, 450);
             this.Controls.Add(this.splitContainer1);
             this.Name = "Form1";
             this.Text = "Form1";
@@ -263,6 +285,8 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button Print;
+        private System.Windows.Forms.ComboBox Printers;
     }
 }
 

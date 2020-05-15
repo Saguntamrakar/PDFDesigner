@@ -15,7 +15,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using PDfCreator.Models;
 using PDfCreator.Helper;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using Dapper;
 using System.Dynamic;
 using iText.IO.Image;
@@ -304,9 +304,31 @@ namespace PDfCreator.Print
 
         private Table CreateTable(iTable tbl, float[] cols)
         {
-            if (cols.Count() == 0) cols = new float[] { 1 };
-            Table table = new Table(GetUnitValue(tbl.ColumnArrayUnit, cols));
-            if (tbl.TableWidth > 0)
+
+
+            if (string.IsNullOrEmpty(tbl.ColWidths))
+            {
+                if (cols.Count() == 0) { cols = new float[] { 1 }; }
+                else
+                { cols = tbl.Columns.ToArray().Select(x => { float i = 1; return i; }).ToArray(); }
+            }
+            else
+            {
+                var fcols = tbl.ColWidths.Split(',');
+                List<float> colwidths = new List<float>();
+                if (fcols.Length > 0)
+                {
+                    for (int i = 0; i < fcols.Length; i++)
+                    {
+                        float.TryParse(fcols[i], out float Colvalue);
+                        colwidths.Add(Colvalue);
+                    }
+                    cols = colwidths.ToArray();
+
+                }
+            }
+                Table table = new Table(GetUnitValue(tbl.ColumnArrayUnit, cols));
+            if (tbl.Width > 0)
             {
                 table.SetWidth(MillimetersToPoints(tbl.TableWidth));
             }
@@ -332,6 +354,10 @@ namespace PDfCreator.Print
             {
                 table.SetHeight(tbl.Height);
             }
+            //if(tbl.Width > 0)
+            //{
+            //    table.SetWidth(tbl.Width);
+            //}
             return table;
         }
 
@@ -603,26 +629,32 @@ namespace PDfCreator.Print
 
         private void LoadSqlTableFixedRows(List<IDictionary<string, object>> rows, string fields, ArrayList cols, Table table, int startRow)
         {
-            if (rows == null) return;
+            //if (rows == null) return;
             if (fields == null) fields = "";
             string[] colFields = fields.Split(',');
-            int rowNum = rows.Count();
+            int rowNum =rows!=null? rows.Count():FixedRows;
             if (FixedRows > 0) rowNum = FixedRows;
             for (int r = 0; r < rowNum; r++)
             {
                 IDictionary<string, object> row = null;
-                if (r < rows.Count())
+                if (rows == null)
                 {
-                    try
+                    row = null;
+                }
+                else
+                {
+                    if (r < rows.Count())
                     {
-                        row = rows[r + startRow];
-                    }
-                    catch
-                    {
-                        row = null;
+                        try
+                        {
+                            row = rows[r + startRow];
+                        }
+                        catch
+                        {
+                            row = null;
+                        }
                     }
                 }
-
 
                 int c = 0;
 

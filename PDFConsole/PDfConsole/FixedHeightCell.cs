@@ -11,13 +11,13 @@ namespace PDfConsole
     {
         public static readonly string DEST = "E:/FixedHeightcell.pdf";
 
-        public static void Main(String[] args)
-        {
-            FileInfo file = new FileInfo(DEST);
-            file.Directory.Create();
+        //public static void Main(String[] args)
+        //{
+        //    FileInfo file = new FileInfo(DEST);
+        //    file.Directory.Create();
 
-            new FixedHeightCell().ManipulatePdf(DEST);
-        }
+        //    new FixedHeightCell().ManipulatePdf(DEST);
+        //}
 
         private void ManipulatePdf(string dest)
         {
