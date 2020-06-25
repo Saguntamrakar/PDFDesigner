@@ -16,6 +16,83 @@ using iText.Layout.Layout;
 using iText.Kernel.Pdf.Xobject;
 namespace PDfCreator.Helper
 {
+    public static class Encryption
+    {
+        public static string Encrypt(string txtValue, string Key = "AmitLalJoshi")
+        {
+            return ToHexString(Encrypt_default(txtValue, Key));
+        }
+        public static string Decrypt(string txtValue, string Key = "AmitLalJoshi")
+        {
+            var todecrypt = FromHexString(txtValue);
+            return Encrypt_default(todecrypt, Key);
+        }
+        private static string Encrypt_default(string txtValue, string Key = "AmitLalJoshi")
+        {
+            try
+            {
+                int i;
+                string TextChar;
+                string KeyChar;
+
+                string retMsg = "";
+                int ind = 1;
+
+                for (i = 1; i <= Convert.ToInt32(txtValue.Length); i++)
+                {
+                    TextChar = txtValue.Substring(i - 1, 1);
+                    ind = i % Key.Length;
+                    //if(ind==0)
+                    //{
+                    //KeyChar = Key.Substring(0);
+                    //}
+                    //else
+                    //{
+                    KeyChar = Key.Substring((ind));
+                    //}
+
+                    //Encrypted = Convert.ToInt32(Encoding.ASCII.(TextChar)) ^ Convert.ToInt32(Encoding.ASCII.GetBytes(KeyChar));
+                    byte str1 = Encoding.ASCII.GetBytes(TextChar)[0];
+                    byte str2 = Encoding.ASCII.GetBytes(KeyChar)[0];
+                    //Encrypted = str1 ^ str2;
+                    var encData = str1 ^ str2;
+                    retMsg = retMsg + Convert.ToChar(encData).ToString();
+
+                }
+
+                return retMsg;
+            }
+            catch (Exception ex)
+            {
+                return "error in encryption";
+            }
+        }
+
+        public static string ToHexString(string str)
+        {
+            var sb = new StringBuilder();
+
+            var bytes = Encoding.Unicode.GetBytes(str);
+            foreach (var t in bytes)
+            {
+                sb.Append(t.ToString("X2"));
+            }
+
+            return sb.ToString(); // returns: "48656C6C6F20776F726C64" for "Hello world"
+        }
+
+        public static string FromHexString(string hexString)
+        {
+            var bytes = new byte[hexString.Length / 2];
+            for (var i = 0; i < bytes.Length; i++)
+            {
+                bytes[i] = Convert.ToByte(hexString.Substring(i * 2, 2), 16);
+            }
+
+            return Encoding.Unicode.GetString(bytes); // returns: "Hello world" for "48656C6C6F20776F726C64"
+        }
+
+    }
     public class TruncateTextInCell
     {
         public static readonly string DEST = "results/sandbox/tables/truncate_text_in_cell.pdf";

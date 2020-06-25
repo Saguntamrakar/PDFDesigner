@@ -257,7 +257,8 @@ namespace WebReport
 
         private void PrepareSqlReportData(InvoicePrinting invPrint, Invoice inv, IDictionary<string, object> param)
         {
-            var constring = inv.Document.ConnectionString;
+            var constring = inv.Document.getSqlConnectionString();
+
             var reportQuery = inv.Document.ReportSource;
             var detailQuery = inv.Document.DetailSource;
 

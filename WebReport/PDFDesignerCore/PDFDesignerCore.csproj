@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.0.35" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="1.1.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\PDFCreater\PDFCreator\PDFCreator.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Form1.cs" />
+    <Compile Update="Form1.Designer.cs">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </Compile>
+    <Compile Update="ParameterDialog.cs" />
+    <Compile Update="ParameterDialog.Designer.cs">
+      <DependentUpon>ParameterDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Update="SqlConnectionDialog.cs" />
+    <Compile Update="SqlConnectionDialog.Designer.cs">
+      <DependentUpon>SqlConnectionDialog.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Form1.resx">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Update="ParameterDialog.resx">
+      <DependentUpon>ParameterDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Update="SqlConnectionDialog.resx">
+      <DependentUpon>SqlConnectionDialog.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

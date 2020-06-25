@@ -44,8 +44,15 @@ namespace PdfDesigner
                 pointY = pointY + 20;
                 try
                 {
-                    var txt = parameters[p];
-                    tbx.Text = txt.ToString();
+                    if (parameters != null)
+                    {
+                        var txt = parameters[p] == null ? "" : parameters[p];
+                        tbx.Text = txt.ToString();
+                    }
+                    else
+                    {
+                        tbx.Text = "";
+                    }
                 }
                 catch
                 {

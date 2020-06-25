@@ -100,13 +100,13 @@ namespace PDfCreator
         //{
         //    Document.setReportCsvSource(fileName);
         //}
-        public void AddSQlConfiguration(String connetionstring,string reportquery,string detailquery,string parameters)
-        {
-            Document.setSqlConnection ( connetionstring);
-            Document.setDetailSource ( detailquery);
-            Document.setReportSource ( reportquery);
-            Document.setQueryParameter(parameters);
-        }
+        //public void AddSQlConfiguration(String connetionstring,string reportquery,string detailquery,string parameters)
+        //{
+        //    Document.setSqlConnection ( connetionstring);
+        //    Document.setDetailSource ( detailquery);
+        //    Document.setReportSource ( reportquery);
+        //    Document.setQueryParameter(parameters);
+        //}
         public Invoice DeepCopy()
         {
             Invoice inv = (Invoice)this.MemberwiseClone();

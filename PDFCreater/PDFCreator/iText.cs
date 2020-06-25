@@ -11,6 +11,9 @@ using PDfCreator.Models;
 using static PDfCreator.Models.iDocument;
 using System.IO;
 using static System.Net.Mime.MediaTypeNames;
+using Microsoft.Data.SqlClient;
+using PDfCreator.Helper;
+
 
 namespace PDfCreator.Models
 {
@@ -47,20 +50,30 @@ namespace PDfCreator.Models
     {
         private string _DetailSource = "";
         private string _ReportSource = "";
+        private string _Server = "";
         private string _ConnectionString = "";
         private string _QueryParameter;
         private JObject _ReportDataObject;
         private List<JObject> _DetailDataObject;
         private ExpandoObject _Parameter;
+        private string _Database;
+        private string _User;
+        private string _Password;
+
         public iPaperSize PaperSize { get; set; } = iPaperSize.A4;
+        public iPageNumPosition PageNum { get; set; } = iPageNumPosition.NoPageNumber;
         public string Margin { get; set; }
         public string CustomSize { get; set; } = "";
         public iOreintation Oreintation { get; set; } = iOreintation.Portrait;
         [DataMemberAttribute]
         public string DetailSource { get { return _DetailSource; } }
         public string ReportSource { get { return _ReportSource; } }
-        public string ConnectionString { get { return _ConnectionString; } }
+        //public string ConnectionString { get { return _ConnectionString; } }
         public string QueryParameter { get { return _QueryParameter; } }
+        public string Server { get{ return _Server; } }
+        public string Database { get { return _Database; } }
+        public string User { get { return _User; } }
+        public string Password { get { return _Password; } }
         public string DetailFields { get; set; }
 
         public DataType DetailDataType { get; set; } = DataType.csv;
@@ -74,9 +87,33 @@ namespace PDfCreator.Models
         {
             _ReportSource = source;
         }
-        public void setSqlConnection(string source)
+        public void setServer(string source)
         {
-            _ConnectionString = source;
+            _Server = source;
+        }
+        public void setDatabase(string source)
+        {
+            _Database = source;
+        }
+        public void setUser(string source)
+        {
+            _User = source;
+        }
+        public void setPassword(string source)
+        {
+            _Password = source;
+        }
+        public string getSqlConnectionString()
+        {
+            if (string.IsNullOrEmpty(_User) || string.IsNullOrEmpty(_Server) || string.IsNullOrEmpty(_Database)) return "";
+            SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
+            builder.DataSource = _Server;
+            builder.UserID = _User;
+            builder.InitialCatalog = _Database;
+            string pwd = Encryption.Decrypt(_Password);
+            builder.Password = pwd;
+            _ConnectionString = builder.ConnectionString;
+            return _ConnectionString;
         }
         public void setReportData(JObject obj)
         {
@@ -312,7 +349,7 @@ namespace PDfCreator.Models
         public iColor BackgroundColor { get; set; }
         public float BoarderWidth { get; set; }
         public string Text { get; set; }
-        public int FontSize { get; set; } = 10;
+        public int FontSize { get; set; } = 8;
         public bool IsBold { get; set; }
         public float BorderWidth { get; set; } = 1;
         public iFonts FontName { get; set; } = iFonts.HELVETICA;
@@ -322,12 +359,15 @@ namespace PDfCreator.Models
         public bool NoTopBorder { get; set; }
         public bool NoBottomBorder { get; set; }
         public bool IsItalic { get; set; }
+        public bool IsUnderline { get; set; }
+        public iSystemValues SystemValue { get; set; }
         public int ColSpan { get; set; }
         public int RowSpan { get; set; }
         public float Height { get; set; }
         public string Margin { get; set; }
         public string Padding { get; set; }
         public bool DisplayOnlyinLastPage { get; set; }
+        public bool DisplayNotinLastPage { get; set; }
         public string FormatString { get; set; } = "";
         public iTextAlignment TextAlignment { get; set; } = iTextAlignment.Left;
         public iHorizontalAlignment HorizontalAlignment { get; set; } = iHorizontalAlignment.Left;
@@ -335,6 +375,7 @@ namespace PDfCreator.Models
         public int MaxChar { get; set; } = 0;
         public int MinHeight { get; set; }
         public bool InLineParameter { get; set; }
+        public bool TruncateText { get; set; }
         public iColumn DeepCopy()
         {
             iColumn column = (iColumn)this.MemberwiseClone();
@@ -405,7 +446,12 @@ namespace PDfCreator.Models
         Justified = 3,
         JustifiedAll = 4
     }
-
+    public enum iSystemValues
+    {
+        Nothing=0,
+        Date=1,
+        Time=2
+    }
     public enum iHorizontalAlignment
     {
         Center, Left, Right
@@ -442,5 +488,15 @@ namespace PDfCreator.Models
         table, header, footer
     }
 
+    public enum iPageNumPosition
+    {
+        NoPageNumber=0,
+        BottomLeft=1,
+        BottomRight=2,
+        BottomCenter=3,
+        TopLeft=4,
+        TopRight=5,
+        TopCenter=6
 
+    }
 }

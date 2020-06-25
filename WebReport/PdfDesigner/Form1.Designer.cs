@@ -159,11 +159,11 @@
             // 
             // Print
             // 
-            this.Print.Location = new System.Drawing.Point(540, 18);
+            this.Print.Location = new System.Drawing.Point(531, 14);
             this.Print.Name = "Print";
-            this.Print.Size = new System.Drawing.Size(50, 37);
+            this.Print.Size = new System.Drawing.Size(73, 33);
             this.Print.TabIndex = 8;
-            this.Print.Text = "button3";
+            this.Print.Text = "Print";
             this.Print.UseVisualStyleBackColor = true;
             this.Print.Click += new System.EventHandler(this.button3_Click);
             // 

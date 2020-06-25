@@ -20,6 +20,7 @@ using PDfCreator.Print;
 using PDfCreator.Models;
 using Dapper;
 using RawPrint;
+using PDfCreator.Helper;
 
 namespace PdfDesigner
 {
@@ -204,6 +205,10 @@ namespace PdfDesigner
                         inoicePrinting.InputParameters = dictParam;
                     }
                 }
+                else
+                {
+                    dictParam = inoicePrinting.InputParameters;
+                }
                 PrepareSqlReportData(inoicePrinting, inv, dictParam);
                 //if (string.IsNullOrEmpty(inv.Document.DetailSource))
                 //{
@@ -220,9 +225,9 @@ namespace PdfDesigner
 
                 using (MemoryStream memoryStream = new MemoryStream())
                 {
-                    inoicePrinting.PrintInvoice(inv, DEST, memoryStream);
-
-                    stream = new MemoryStream(memoryStream.ToArray());
+                    byte[] bytes= inoicePrinting.PrintInvoice(inv, DEST, memoryStream);
+                    //byte[] bytes = memoryStream.ToArray();
+                    stream = new MemoryStream(bytes);
                     pdfDocumentViewer1.LoadFromStream(stream);
                     //pdfDocumentViewer1.LoadFromFile(DEST);
                 }
@@ -241,7 +246,7 @@ namespace PdfDesigner
 
         private void PrepareSqlReportData(InvoicePrinting invPrint, Invoice inv, IDictionary<string, object> param)
         {
-            var constring = inv.Document.ConnectionString;
+            var constring = inv.Document.getSqlConnectionString();
             var reportQuery = inv.Document.ReportSource;
             var detailQuery = inv.Document.DetailSource;
 
@@ -355,6 +360,17 @@ namespace PdfDesigner
 
         private void button1_Click_2(object sender, EventArgs e)
         {
+            if (string.IsNullOrEmpty(inv.Document.QueryParameter) == false)
+            {
+                string paramString = inv.Document.QueryParameter;
+                var jsonParam = OpenParameter_Dialog(paramString);
+                if (jsonParam.ToString()=="") return;
+                var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam);
+                var dictParam = jobjParam.ToObject<Dictionary<string, object>>();
+                inoicePrinting.InputParameters = dictParam;
+                inoicePrinting.ReportData = null;
+                inoicePrinting.DetailData = null;
+            }
             LoadPdf();
         }
         void treeView1MouseUp(object sender, MouseEventArgs e)
@@ -909,18 +925,27 @@ namespace PdfDesigner
         private void Open_SqlConnectionDialog()
         {
             SqlConnectionDialog dlg = new SqlConnectionDialog();
-            dlg.ConnectionString = inv.Document.ConnectionString;
+            dlg.Server = inv.Document.Server;
+            dlg.Database = inv.Document.Database;
+            dlg.User = inv.Document.User;
+            dlg.Password = Encryption.Decrypt( inv.Document.Password==null?"": inv.Document.Password);
             dlg.DetailQuery = inv.Document.DetailSource;
             dlg.ReportQuery = inv.Document.ReportSource;
             dlg.Parameter = inv.Document.QueryParameter;
             if (dlg.ShowDialog() == DialogResult.OK)
             {
-                var constring = dlg.ConnectionString;
+                var server = dlg.Server;
+                var database = dlg.Database;
+                var user = dlg.User;
+                var password = dlg.Password;
                 var detailQuery = dlg.DetailQuery;
                 var reportQuery = dlg.ReportQuery;
                 var parameter = dlg.Parameter;
                 inv.Document.setDetailSource(detailQuery);
-                inv.Document.setSqlConnection(constring);
+                inv.Document.setServer(server);
+                inv.Document.setDatabase(database);
+                inv.Document.setUser(user);
+                inv.Document.setPassword(Encryption.Encrypt(password));
                 inv.Document.setReportSource(reportQuery);
                 inv.Document.setQueryParameter(parameter);
 

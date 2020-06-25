@@ -1,0 +1,6 @@
+MainPackage=F:\Sag Ba\Codes\Report\WebReport\PDfDesignerPackage\bin\x64\Release\PDfDesignerPackage_1.0.7.0_x64.msix
+SymbolPackage=F:\Sag Ba\Codes\Report\WebReport\PDfDesignerPackage\obj\x64\Release\Symbols\PDfDesignerPackage_1.0.7.0_x64.appxsym
+ResourcePack=F:\Sag Ba\Codes\Report\WebReport\PDfDesignerPackage\bin\x64\Release\PDfDesignerPackage_1.0.7.0_scale-100.msix
+ResourcePack=F:\Sag Ba\Codes\Report\WebReport\PDfDesignerPackage\bin\x64\Release\PDfDesignerPackage_1.0.7.0_scale-125.msix
+ResourcePack=F:\Sag Ba\Codes\Report\WebReport\PDfDesignerPackage\bin\x64\Release\PDfDesignerPackage_1.0.7.0_scale-150.msix
+ResourcePack=F:\Sag Ba\Codes\Report\WebReport\PDfDesignerPackage\bin\x64\Release\PDfDesignerPackage_1.0.7.0_scale-400.msix
