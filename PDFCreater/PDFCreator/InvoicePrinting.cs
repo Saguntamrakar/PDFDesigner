@@ -22,6 +22,8 @@ using System.Dynamic;
 using iText.IO.Image;
 using iText.Kernel.Utils;
 using System.Drawing;
+using System.Threading.Tasks;
+
 namespace PDfCreator.Print
 {
     public class InvoicePrinting
@@ -175,6 +177,119 @@ namespace PDfCreator.Print
 
             }
         }
+
+        public async Task<byte[]> PrintInvoiceAsync(Invoice invoice)
+        {
+            IsInMemomory = true;
+            //memStream = new MemoryStream();
+            MemoryStream memStream = new MemoryStream();
+            try
+            {
+
+                ps = GetPaperSize(invoice.Document.PaperSize, invoice.Document.CustomSize);
+                //dest = filename;
+                PdfWriter pdfWriter;
+                //if (memStream != null)
+               
+                
+                   
+                    pdfWriter = new PdfWriter(memStream);
+
+
+
+
+                    pdf = new PdfDocument(pdfWriter);
+                    if (invoice.Document.Oreintation == iOreintation.Landscape)
+                    {
+                        document = new Document(pdf, ps.Rotate());
+                    }
+                    else
+                    {
+                        document = new Document(pdf, ps);
+                    }
+                    if (string.IsNullOrEmpty(invoice.Document.Margin) == true) invoice.Document.Margin = "0,0,0,0";
+                    string[] strMargins = invoice.Document.Margin.Split(',');
+                    float leftMargin = 0; float topMargin = 0; float rightMargin = 0; float bottomMargin = 0;
+                    float.TryParse(strMargins[0], out leftMargin);
+                    if (strMargins.Length > 1) float.TryParse(strMargins[1], out topMargin);
+                    if (strMargins.Length > 2) float.TryParse(strMargins[2], out rightMargin);
+                    if (strMargins.Length > 3) float.TryParse(strMargins[3], out bottomMargin);
+                    document.SetTopMargin(topMargin);
+                    document.SetBottomMargin(bottomMargin);
+                    document.SetLeftMargin(leftMargin);
+                    document.SetRightMargin(rightMargin);
+                    if (invoice.Detail.Detail != null)
+                    {
+                        FixedRows = invoice.Detail.FixedRows;
+                    }
+
+                    IsLastPage = true;
+                    if (FixedRows > 0 && DetailData != null && DetailData.Count() > 0)
+                    {
+                        int startRow = 0;
+                        int lapCount = 0;
+
+
+                        while (startRow < DetailData.Count())
+                        {
+                            IsLastPage = false;
+                            lapCount = lapCount + 1;
+                            if (startRow >= DetailData.Count() - 1)
+                            {
+                                IsLastPage = true;
+                            }
+                            if ((lapCount * FixedRows) >= DetailData.Count())
+                            {
+                                IsLastPage = true;
+                            }
+                            CreatePDF(invoice, startRow);
+                            startRow = startRow + FixedRows;
+                            if (startRow < DetailData.Count())
+                            {
+                                document.Add(new AreaBreak());
+
+                            }
+
+
+                        }
+
+                    }
+                    else
+                    {
+                        CreatePDF(invoice, 0);
+                    }
+
+                    document.Close();
+                    byte[] sourcebytes = memStream.ToArray();
+                    if (invoice.Document.PageNum == iPageNumPosition.NoPageNumber)
+                    {
+                        return sourcebytes;
+                    }
+                    else
+                    {
+                        byte[] pagenumAddedBytes = AddPageNumber(sourcebytes, invoice);
+                        //memStream = new MemoryStream(pagenumAddedBytes);
+                        return pagenumAddedBytes;
+                    }
+                
+            }
+            catch (Exception ex)
+            {
+                //document.Close();
+                throw ex;
+            }
+            finally
+            {
+
+                document.Close();
+                memStream.Dispose();
+                //byte[] sourcebytes = memStream.ToArray();
+                //byte[] pagenumAdded = AddPageNumber(sourcebytes);
+
+                //memStream = new MemoryStream(pagenumAdded);
+
+            }
+        }
         //public Stream GetMemoryOfInvoice(Invoice invoice)
         //{
         //    Stream memStream = new str;
@@ -271,7 +386,7 @@ namespace PDfCreator.Print
                         table.IsKeepTogether();
                         document.Add(table);
 
-                    }
+                    } 
 
                     //float[] cols = invoice.Detail.DetailHeader.Columns.ToArray().Select(x => { float i = 1; return i; }).ToArray();
 
@@ -325,7 +440,7 @@ namespace PDfCreator.Print
 
             }
         }
-
+        
         private Table CreateTable(iTable tbl, float[] cols)
         {
 

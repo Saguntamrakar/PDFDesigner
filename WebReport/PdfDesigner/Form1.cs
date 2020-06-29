@@ -242,7 +242,70 @@ namespace PdfDesigner
                 return stream;
             }
         }
+        private async Task<Stream> LoadPdfAsync(string ExportFileName = "")
+        {
+            Stream stream = new MemoryStream();
+            try
+            {
 
+                string DEST = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test1.pdf");
+                if (string.IsNullOrEmpty(ExportFileName))
+                {
+                    if (Directory.Exists(ExportFileName) == true)
+                    {
+                        DEST = ExportFileName;
+                    }
+                }
+                FileInfo file = new FileInfo(DEST);
+                string jsonParam = "";
+                IDictionary<string, object> dictParam = new Dictionary<string, object>();
+                if (inoicePrinting.InputParameters == null)
+                {
+                    if (string.IsNullOrEmpty(inv.Document.QueryParameter) == false)
+                    {
+                        string paramString = inv.Document.QueryParameter;
+                        jsonParam = OpenParameter_Dialog(paramString);
+                        var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam);
+                        dictParam = jobjParam.ToObject<Dictionary<string, object>>();
+                        inoicePrinting.InputParameters = dictParam;
+                    }
+                }
+                else
+                {
+                    dictParam = inoicePrinting.InputParameters;
+                }
+                PrepareSqlReportData(inoicePrinting, inv, dictParam);
+                //if (string.IsNullOrEmpty(inv.Document.DetailSource))
+                //{
+                //    if (inoicePrinting.DetailData == null || inoicePrinting.DetailData.Count() == 0)
+                //    {
+
+
+                //    }
+                //}
+
+
+
+
+
+               
+                    byte[] bytes =await inoicePrinting.PrintInvoiceAsync(inv);
+                    //byte[] bytes = memoryStream.ToArray();
+                    stream = new MemoryStream(bytes);
+                    pdfDocumentViewer1.LoadFromStream(stream);
+                    //pdfDocumentViewer1.LoadFromFile(DEST);
+                
+
+                return stream;
+
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+                return stream;
+            }
+        }
 
         private void PrepareSqlReportData(InvoicePrinting invPrint, Invoice inv, IDictionary<string, object> param)
         {
@@ -304,18 +367,10 @@ namespace PdfDesigner
         }
         private void button1_Click(object sender, EventArgs e)
         {
-            LoadPdf();
+            LoadPdfAsync();
         }
 
-        private void button2_Click(object sender, EventArgs e)
-        {
-            LoadPdf();
-        }
-
-        private void button1_Click_1(object sender, EventArgs e)
-        {
-            LoadPdf();
-        }
+       
 
         private void LoadPropertyGrid(object obj)
         {
@@ -371,7 +426,7 @@ namespace PdfDesigner
                 inoicePrinting.ReportData = null;
                 inoicePrinting.DetailData = null;
             }
-            LoadPdf();
+            LoadPdfAsync();
         }
         void treeView1MouseUp(object sender, MouseEventArgs e)
         {
