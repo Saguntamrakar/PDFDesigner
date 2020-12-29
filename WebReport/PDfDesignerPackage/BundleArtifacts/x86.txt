@@ -1,2 +1,2 @@
-MainPackage=F:\Sag Ba\Codes\Report\WebReport\PDfDesignerPackage\bin\x86\Release\PDfDesignerPackage_1.0.7.0_x86.msix
-SymbolPackage=F:\Sag Ba\Codes\Report\WebReport\PDfDesignerPackage\obj\x86\Release\Symbols\PDfDesignerPackage_1.0.7.0_x86.appxsym
+MainPackage=F:\Sag Ba\Codes\Report\WebReport\PDfDesignerPackage\bin\x86\Debug\PDfDesignerPackage_1.0.8.0_x86_Debug.msix
+SymbolPackage=F:\Sag Ba\Codes\Report\WebReport\PDfDesignerPackage\obj\x86\Debug\Symbols\PDfDesignerPackage_1.0.8.0_x86_Debug.appxsym

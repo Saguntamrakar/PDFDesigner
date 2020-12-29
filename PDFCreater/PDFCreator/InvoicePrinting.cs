@@ -24,6 +24,8 @@ using iText.Kernel.Utils;
 using System.Drawing;
 using System.Threading.Tasks;
 using iText.StyledXmlParser.Css.Resolve.Shorthand.Impl;
+using Path = System.IO.Path;
+using iText.IO.Font;
 
 namespace PDfCreator.Print
 {
@@ -36,22 +38,27 @@ namespace PDfCreator.Print
         private PdfFont bold;
         string dest = "E:/invoce.pdf";
         private string _InputParameter;
+        private Dictionary<string, PdfFont> CustomFontCollection = new Dictionary<string, PdfFont>();
+        private iText.Layout.Font.FontSet fontSet = new iText.Layout.Font.FontSet();
         public List<IDictionary<string, object>> DetailData { get; set; }
         public IDictionary<string, object> ReportData { get; set; }
         public IDictionary<string, object> InputParameters { get; set; }
         private int FixedRows;
         private bool IsLastPage;
         private bool IsInMemomory;
-        int startRow = 0;
+        private int startRow = 0;
+        public int StartRow { get { return startRow; } set { startRow = value; } }
         public InvoicePrinting(bool isinMemory = false)
         {
 
             IsInMemomory = isinMemory;
 
             // Initialize document
-
-            font = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
-            bold = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+            var appPath = Environment.CurrentDirectory;
+            var fontPath = Path.Combine(appPath, "Fonts", "Helvetica.ttf");
+            //font = PdfFontFactory.CreateFont(fontPath,"Helvetica", true);
+            //font = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+            //bold = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
         }
         public void MergePdfinMemory(MemoryStream memStream, List<byte[]> pdfList)
         {
@@ -68,9 +75,12 @@ namespace PDfCreator.Print
         }
         public byte[] PrintInvoice(Invoice invoice, string filename, MemoryStream memStream = null)
         {
-            if (memStream != null) IsInMemomory = true;
-            //memStream = new MemoryStream();
 
+            if (memStream != null)
+            {
+                IsInMemomory = true;
+                memStream = new MemoryStream();
+            }
             try
             {
 
@@ -402,7 +412,7 @@ namespace PDfCreator.Print
                                 //PrepareSqlReportData(invoice, param, invoice.Detail.Detail.Columns.ToList(), table);
                                 //LoadSqlTable(DetailData , invoice.Document.DetailFields, invoice.Detail.Detail.Columns.ToList(), table);
                                 LoadSqlTableFixedRows(DetailData, invoice.Document.DetailFields, invoice.Detail.Detail.Columns, table, startrow);
-                                
+
                             }
                         }
                         catch (Exception ex)
@@ -1117,7 +1127,7 @@ namespace PDfCreator.Print
 
 
 
-                cell.SetFont(GetPdfFont(col.FontName));
+                cell.SetFont(GetPdfFont(col.FontName,col.FontNameCustom));
                 cell.SetFontSize(col.FontSize);
                 if (col.IsBold == true) cell.SetBold();
                 if (col.NoBorder == true)
@@ -1244,7 +1254,7 @@ namespace PDfCreator.Print
 
         }
 
-        private string GetColumnText(iColumn col)
+        private string  GetColumnText(iColumn col)
         {
             if (string.IsNullOrEmpty(col.Text) == true) return "";
             if (col.DisplayOnlyinLastPage == true)
@@ -1279,10 +1289,17 @@ namespace PDfCreator.Print
                         int replaceTextlength = 0;
                         try
                         {
-                            var txt = this.InputParameters[key];
-                            string textToReplace = txt == null ? txtVariable : txt.ToString() == "" ? txtVariable : txt.ToString();
-                            LinText = LinText.Replace(txtVariable, textToReplace);
-                            replaceTextlength = textToReplace.Length;
+                            if(this.InputParameters.ContainsKey(key)){
+                                var txt = this.InputParameters[key];
+                                string textToReplace = txt == null ? txtVariable : txt.ToString() == "" ? txtVariable : txt.ToString();
+                                LinText = LinText.Replace(txtVariable, textToReplace);
+                                replaceTextlength = textToReplace.Length;
+                            }
+                            else
+                            {
+                                replaceTextlength = txtVariable.Length;
+                            }
+                           
                         }
                         catch { }
                         startIndex = startIndex + replaceTextlength;
@@ -1295,6 +1312,7 @@ namespace PDfCreator.Print
                 {
                     if (startIndex == 0) startIndex = -1;
                     startIndex = LinText.IndexOf('@', startIndex + 1);
+
                     if (startIndex > -1 && startIndex < LinText.Length)
                     {
                         int nextIndex = LinText.IndexOf(' ', startIndex + 1);
@@ -1304,10 +1322,25 @@ namespace PDfCreator.Print
                         int replaceTextlength = 0;
                         try
                         {
-                            var txt = this.ReportData[key];
-                            string textToReplace = txt == null ? txtVariable : txt.ToString() == "" ? txtVariable : txt.ToString();
+                            string txt="";
+                            if (this.ReportData == null)
+                            {
+                                txt = txtVariable;
+                            }
+                            else
+                            {
+                                if (this.ReportData.ContainsKey(key))
+                                {
+                                    var ttt = this.ReportData[key];
+                                    txt=ttt == null?"": ttt.ToString();
+                                }
+                                
+                                else txt = txtVariable;
+                            }
+                            string textToReplace = string.IsNullOrEmpty(txt) ? "" :  txt.ToString();
                             LinText = LinText.Replace(txtVariable, textToReplace);
                             replaceTextlength = textToReplace.Length;
+
                         }
                         catch { }
                         startIndex = startIndex + replaceTextlength;
@@ -1323,10 +1356,15 @@ namespace PDfCreator.Print
                 {
                     if (this.ReportData == null)
                     {
-                        return "";
+                        return col.Text;
                     }
-                    var txt = this.ReportData[key];
-                    return txt == null ? col.Text : txt.ToString();
+                    if (this.ReportData.ContainsKey(key))
+                    {
+                        var txt = this.ReportData[key];
+                        return txt == null ? "" : txt.ToString();
+                    }
+                    return col.Text;
+                    
                 }
                 catch
                 {
@@ -1414,7 +1452,7 @@ namespace PDfCreator.Print
                     return VerticalAlignment.BOTTOM;
             }
         }
-        public PdfFont GetPdfFont(iFonts fontname)
+        public PdfFont GetPdfFont(iFonts fontname,string CustomFontName="")
         {
 
             switch (fontname)
@@ -1437,11 +1475,48 @@ namespace PDfCreator.Print
                     return PdfFontFactory.CreateFont(StandardFonts.TIMES_ITALIC);
                 case iFonts.SYMBOL:
                     return PdfFontFactory.CreateFont(StandardFonts.SYMBOL);
+                case iFonts.CUSTOM:
+                    return getCustomFont(CustomFontName);
                 default:
+                    
                     return PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
             }
         }
 
+        private PdfFont getCustomFont(string CustomFontName)
+        {
+            if (string.IsNullOrEmpty(CustomFontName))
+            {
+                return PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+            }
+            var fontname = CustomFontName.ToLower();
+            if (PdfFontFactory.IsRegistered(CustomFontName) ==true)
+            {
+
+                //var fnt = PdfFontFactory.GetRegisteredFonts();
+                var pfont = PdfFontFactory.CreateRegisteredFont(CustomFontName,PdfEncodings.CP1250,true);
+                return pfont;
+                
+            }
+            else
+            {
+                var appPath = Environment.CurrentDirectory;
+                if (fontname.EndsWith(".ttf") == false) CustomFontName = CustomFontName + ".ttf";
+                var fontPath = Path.Combine(appPath, "Fonts", CustomFontName);
+                if (File.Exists(fontPath) == false)
+                    throw new Exception(fontPath + " Could not found");
+                    //return PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+                
+                    PdfFontFactory.Register(fontPath, CustomFontName);
+               
+                //var s = PdfFontFactory.GetRegisteredFonts();
+
+                var pfont =  PdfFontFactory.CreateRegisteredFont(CustomFontName, PdfEncodings.CP1250, true);
+               
+                return pfont;
+            }
+            
+        }
         public PageSize GetPaperSize(iPaperSize paperSize, string CustomeSize = "")
         {
 

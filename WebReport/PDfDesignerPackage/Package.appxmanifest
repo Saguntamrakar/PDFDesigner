@@ -9,7 +9,7 @@
   <Identity
     Name="8a181284-602d-45a8-a261-512459d4f227"
     Publisher="CN=sagun"
-    Version="1.0.7.0" />
+    Version="1.0.8.0" />
 
   <Properties>
     <DisplayName>PDfDesignerPackage</DisplayName>

@@ -46,7 +46,7 @@ namespace PdfDesigner
         {
             inv = new Invoice();
             inoicePrinting = new InvoicePrinting();
-            foreach(string printername in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
+            foreach (string printername in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
             {
                 this.Printers.Items.Add(printername);
             }
@@ -182,7 +182,7 @@ namespace PdfDesigner
             Stream stream = new MemoryStream();
             try
             {
-                
+
                 string DEST = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test1.pdf");
                 if (string.IsNullOrEmpty(ExportFileName))
                 {
@@ -222,10 +222,10 @@ namespace PdfDesigner
 
 
 
-
+                inoicePrinting.StartRow = 0;
                 using (MemoryStream memoryStream = new MemoryStream())
                 {
-                    byte[] bytes= inoicePrinting.PrintInvoice(inv, DEST, memoryStream);
+                    byte[] bytes = inoicePrinting.PrintInvoice(inv, DEST, memoryStream);
                     //byte[] bytes = memoryStream.ToArray();
                     stream = new MemoryStream(bytes);
                     pdfDocumentViewer1.LoadFromStream(stream);
@@ -237,7 +237,7 @@ namespace PdfDesigner
             }
             catch (Exception ex)
             {
-                
+
                 MessageBox.Show(ex.Message);
                 return stream;
             }
@@ -288,13 +288,13 @@ namespace PdfDesigner
 
 
 
-               
-                    byte[] bytes =await inoicePrinting.PrintInvoiceAsync(inv);
-                    //byte[] bytes = memoryStream.ToArray();
-                    stream = new MemoryStream(bytes);
-                    pdfDocumentViewer1.LoadFromStream(stream);
-                    //pdfDocumentViewer1.LoadFromFile(DEST);
-                
+
+                byte[] bytes = await inoicePrinting.PrintInvoiceAsync(inv);
+                //byte[] bytes = memoryStream.ToArray();
+                stream = new MemoryStream(bytes);
+                pdfDocumentViewer1.LoadFromStream(stream);
+                //pdfDocumentViewer1.LoadFromFile(DEST);
+
 
                 return stream;
 
@@ -344,10 +344,12 @@ namespace PdfDesigner
             try
             {
                 ParameterDialog pmDlg = new ParameterDialog();
+                pmDlg.DialogParamList = inv.Document.DialogParamList;
                 pmDlg.LoadParameters(paramString, inoicePrinting.InputParameters);
                 if (pmDlg.ShowDialog() == DialogResult.OK)
                 {
                     string jsonParam = pmDlg.jsonParam;
+                    inv.Document.DialogParamList = pmDlg.DialogParamList;
                     return jsonParam;
                 }
                 return "";
@@ -365,12 +367,37 @@ namespace PdfDesigner
             }
 
         }
+
+        private void OpenDialogParameter_dialog(string paramString)
+        {
+            if (string.IsNullOrEmpty(paramString)) return ;
+            try
+            {
+                DialogDesigner pmDlg = new DialogDesigner();
+                //var dlglst = inv.Document.DialogParamList.ToList();
+               
+                pmDlg.DialogParamList = inv.Document.DialogParamList;
+                pmDlg.LoadParameterDialogs(paramString, inoicePrinting.InputParameters);
+                if (pmDlg.ShowDialog() == DialogResult.OK)
+                {
+                    inv.Document.DialogParamList = pmDlg.DialogParamList;
+                    
+                }
+                
+            }
+            catch (Exception Ex)
+            {
+
+                MessageBox.Show(Ex.Message);
+            }
+        }
+
         private void button1_Click(object sender, EventArgs e)
         {
             LoadPdfAsync();
         }
 
-       
+
 
         private void LoadPropertyGrid(object obj)
         {
@@ -419,14 +446,15 @@ namespace PdfDesigner
             {
                 string paramString = inv.Document.QueryParameter;
                 var jsonParam = OpenParameter_Dialog(paramString);
-                if (jsonParam.ToString()=="") return;
+                if (jsonParam.ToString() == "") return;
                 var jobjParam = JsonConvert.DeserializeObject<JObject>(jsonParam);
                 var dictParam = jobjParam.ToObject<Dictionary<string, object>>();
                 inoicePrinting.InputParameters = dictParam;
                 inoicePrinting.ReportData = null;
                 inoicePrinting.DetailData = null;
+                inoicePrinting.StartRow = 0;
             }
-            LoadPdfAsync();
+            LoadPdf();
         }
         void treeView1MouseUp(object sender, MouseEventArgs e)
         {
@@ -679,14 +707,14 @@ namespace PdfDesigner
                     var CutObj = CutItem.CutParentobj.Columns[CutItem.CutObjIndex];
                     if (CutObj.GetType().Equals(typeof(iColumn)) || CutObj.GetType().Equals(typeof(iTable)))
                     {
-                        if (CutObj.GetType().Equals(typeof(iTable)) && (parentNod.Text=="Detail Header" || parentNod.Text == "Detail Footer" || parentNod.Text == "Data"))
+                        if (CutObj.GetType().Equals(typeof(iTable)) && (parentNod.Text == "Detail Header" || parentNod.Text == "Detail Footer" || parentNod.Text == "Data"))
                         {
                             throw new Exception("Table cannot be paste here");
                         }
                         //{
                         var parenttbl = parentItem as iTable;
                         if (parenttbl == null) throw new Exception("Parent is not a table");
-                        
+
                         CutItem.CutParentobj.Columns.RemoveAt(CutItem.CutObjIndex);
                         var arrayIndex = parenttbl.Columns.IndexOf(currenNod.Tag);
                         parenttbl.Columns.Insert(arrayIndex, CutObj);
@@ -839,12 +867,19 @@ namespace PdfDesigner
             menuItem.Name = "AddParameters";
             myContextMenuStrip.Items.Add(menuItem);
 
+            menuItem = new ToolStripMenuItem("Add Parameter Dialog Designer");
+            menuItem.Click += new EventHandler(dataMenuItem_Click);
+            menuItem.Name = "ParamDialog";
+            myContextMenuStrip.Items.Add(menuItem);
+
             menuItem = new ToolStripMenuItem("Refresh Tree");
 
             menuItem.Click += new EventHandler(dataMenuItem_Click);
 
             menuItem.Name = "Refresh";
             myContextMenuStrip.Items.Add(menuItem);
+
+           
         }
 
         private void dataMenuItem_Click(object sender, EventArgs e)
@@ -873,6 +908,11 @@ namespace PdfDesigner
                 inoicePrinting.InputParameters = dictParam;
                 PrepareSqlReportData(inoicePrinting, inv, dictParam);
                 return;
+            }
+            if (menuItem.Name == "ParamDialog")
+            {
+                OpenDialogParameter_dialog(inv.Document.QueryParameter);
+
             }
             if (menuItem.Name == "Refresh")
             {
@@ -983,7 +1023,7 @@ namespace PdfDesigner
             dlg.Server = inv.Document.Server;
             dlg.Database = inv.Document.Database;
             dlg.User = inv.Document.User;
-            dlg.Password = Encryption.Decrypt( inv.Document.Password==null?"": inv.Document.Password);
+            dlg.Password = Encryption.Decrypt(inv.Document.Password == null ? "" : inv.Document.Password);
             dlg.DetailQuery = inv.Document.DetailSource;
             dlg.ReportQuery = inv.Document.ReportSource;
             dlg.Parameter = inv.Document.QueryParameter;
@@ -1017,7 +1057,11 @@ namespace PdfDesigner
                 saveFileDialog1.Filter = "pdf|*.pdf";
                 if (saveFileDialog1.ShowDialog() == DialogResult.OK)
                 {
-                    inoicePrinting.PrintInvoice(inv, saveFileDialog1.FileName);
+                    using (MemoryStream memstream = new MemoryStream())
+                    {
+                        var bytes = inoicePrinting.PrintInvoice(inv, saveFileDialog1.FileName, memstream);
+                        File.WriteAllBytes(saveFileDialog1.FileName, bytes);
+                    }
                 }
             }
             catch (Exception ex)
@@ -1029,7 +1073,7 @@ namespace PdfDesigner
 
         private void button3_Click(object sender, EventArgs e)
         {
-            string printername = this.Printers.SelectedItem as string ;
+            string printername = this.Printers.SelectedItem as string;
             if (string.IsNullOrEmpty(printername)) printername = System.Drawing.Printing.PrinterSettings.InstalledPrinters[0];
             Stream stream = LoadPdf();
             Printer.PrintStream(printername, stream, "pdfdocument");

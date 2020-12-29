@@ -1,11 +1,56 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="wwwroot\Fonts\ARIAL.TTF" />
+    <Content Remove="wwwroot\Fonts\ARIALBD.TTF" />
+    <Content Remove="wwwroot\Fonts\ARIALBI.TTF" />
+    <Content Remove="wwwroot\Fonts\ARIALI.TTF" />
+    <Content Remove="wwwroot\Fonts\ARIALN.TTF" />
+    <Content Remove="wwwroot\Fonts\ARIALNB.TTF" />
+    <Content Remove="wwwroot\Fonts\ARIALNBI.TTF" />
+    <Content Remove="wwwroot\Fonts\ARIALNI.TTF" />
+    <Content Remove="wwwroot\Fonts\ARIBLK.TTF" />
+    <Content Remove="wwwroot\Fonts\Helvetica-Bold.ttf" />
+    <Content Remove="wwwroot\Fonts\Helvetica-BoldOblique.ttf" />
+    <Content Remove="wwwroot\Fonts\helvetica-compressed-5871d14b6903a.otf" />
+    <Content Remove="wwwroot\Fonts\helvetica-light-587ebe5a59211.ttf" />
+    <Content Remove="wwwroot\Fonts\Helvetica-Oblique.ttf" />
+    <Content Remove="wwwroot\Fonts\helvetica-rounded-bold-5871d05ead8de.otf" />
+    <Content Remove="wwwroot\Fonts\Helvetica.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.2" />
+    <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="3.1.5" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\NewFolder\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\Fonts\ARIAL.TTF" />
+    <None Include="wwwroot\Fonts\ARIALBD.TTF" />
+    <None Include="wwwroot\Fonts\ARIALBI.TTF" />
+    <None Include="wwwroot\Fonts\ARIALI.TTF" />
+    <None Include="wwwroot\Fonts\ARIALN.TTF" />
+    <None Include="wwwroot\Fonts\ARIALNB.TTF" />
+    <None Include="wwwroot\Fonts\ARIALNBI.TTF" />
+    <None Include="wwwroot\Fonts\ARIALNI.TTF" />
+    <None Include="wwwroot\Fonts\ARIBLK.TTF" />
+    <None Include="wwwroot\Fonts\Helvetica-Bold.ttf" />
+    <None Include="wwwroot\Fonts\Helvetica-BoldOblique.ttf" />
+    <None Include="wwwroot\Fonts\helvetica-compressed-5871d14b6903a.otf" />
+    <None Include="wwwroot\Fonts\helvetica-light-587ebe5a59211.ttf" />
+    <None Include="wwwroot\Fonts\Helvetica-Oblique.ttf" />
+    <None Include="wwwroot\Fonts\helvetica-rounded-bold-5871d05ead8de.otf" />
+    <None Include="wwwroot\Fonts\Helvetica.ttf" />
   </ItemGroup>
 
   <ItemGroup>

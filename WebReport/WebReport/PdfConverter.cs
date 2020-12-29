@@ -24,12 +24,13 @@ namespace WebReport
         public PdfConverter(IWebHostEnvironment env)
         {
             _env = env;
-        }
+        } 
         public  FunctionResponse OpenPdfReport(PdfReportParameter reportParameter)
         {
             var filename = reportParameter.filename;
             if (string.IsNullOrEmpty(filename)) return new FunctionResponse { status = "error", result = "Invalid file Name" };
             var reportDirectory = _env.WebRootPath;
+            if (filename.EndsWith(".ims") == false) filename = filename + ".ims";
             var reportFile = Path.Combine(reportDirectory, "IMSReport", filename);
             if (File.Exists(reportFile) == false) return new FunctionResponse { status = "error", result = "File not found" };
             string str = File.ReadAllText(reportFile);
@@ -50,10 +51,10 @@ namespace WebReport
             
             using (MemoryStream memStream = new MemoryStream())
             {
-                
-                inoicePrinting.PrintInvoice(inv, "",  memStream: memStream);
+
+                byte[] bytes = inoicePrinting.PrintInvoice(inv, "",  memStream: memStream);
                
-                return new FunctionResponse { status = "ok", result = memStream.ToArray() };
+                return new FunctionResponse { status = "ok", result = bytes };
             }
            
 
@@ -84,8 +85,8 @@ namespace WebReport
                     }
                     using (MemoryStream memStream = new MemoryStream())
                     {
-                        inoicePrinting.PrintInvoice(inv, "", memStream: memStream);
-                        pdfFiles.Add(memStream.ToArray());
+                        byte[] bytes= inoicePrinting.PrintInvoice(inv, "", memStream: memStream);
+                        pdfFiles.Add(bytes);
                         //return new FunctionResponse { status = "ok", result = memStream.ToArray() };
                     }
                 }
@@ -161,8 +162,8 @@ namespace WebReport
                         string jsonParam = "{" + string.Join(",", qparam.Select(x => { var s = $"\"{x}\":\"{x}\""; return s; })) + "}";
                         return new FunctionResponse { status = "error", result = "Required parameter not found provide query parameter in following format '" + jsonParam + "'" };
                     }
-                    JsonElement jparam = (JsonElement)paramValue;
-                    paramObject.Add(qparam,GetObject(jparam));
+                    var jparam =paramValue;
+                    paramObject.Add(qparam,jparam);
                     
                 }
                 catch

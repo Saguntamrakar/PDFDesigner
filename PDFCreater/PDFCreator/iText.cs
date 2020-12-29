@@ -59,7 +59,7 @@ namespace PDfCreator.Models
         private string _Database;
         private string _User;
         private string _Password;
-
+        public List<DlgParameter> DialogParamList { get; set; } = new List<DlgParameter>();
         public iPaperSize PaperSize { get; set; } = iPaperSize.A4;
         public iPageNumPosition PageNum { get; set; } = iPageNumPosition.NoPageNumber;
         public string Margin { get; set; }
@@ -70,7 +70,7 @@ namespace PDfCreator.Models
         public string ReportSource { get { return _ReportSource; } }
         //public string ConnectionString { get { return _ConnectionString; } }
         public string QueryParameter { get { return _QueryParameter; } }
-        public string Server { get{ return _Server; } }
+        public string Server { get { return _Server; } }
         public string Database { get { return _Database; } }
         public string User { get { return _User; } }
         public string Password { get { return _Password; } }
@@ -150,7 +150,7 @@ namespace PDfCreator.Models
         public float BoarderWidth { get; set; }
 
     }
-    
+
     public class iColor
     {
         public iColor()
@@ -200,10 +200,10 @@ namespace PDfCreator.Models
         }
         public iColumnArrayUnit ColumnArrayUnit { get; set; } = iColumnArrayUnit.PercentArray;
         public iTable DetailHeader { get { return _DetailHeader; } }
-        public iTable  Detail { get { return _Detail; } }
+        public iTable Detail { get { return _Detail; } }
         public iTable DetailFooter { get { return _DetailFooter; } }
         public int FixedRows { get; set; }
-        
+
         public iDetail()
         {
             _DetailHeader = new iTable();
@@ -353,6 +353,7 @@ namespace PDfCreator.Models
         public bool IsBold { get; set; }
         public float BorderWidth { get; set; } = 1;
         public iFonts FontName { get; set; } = iFonts.HELVETICA;
+        public string FontNameCustom { get; set; }
         public bool NoBorder { get; set; }
         public bool NoLeftBorder { get; set; }
         public bool NoRightBorder { get; set; }
@@ -386,7 +387,7 @@ namespace PDfCreator.Models
     {
         private string _path;
         public bool AutoScale { get; set; }
-        public string Path { get { return _path; }  }
+        public string Path { get { return _path; } }
         //public iColor BackgroundColor { get; set; }
         public float BoarderWidth { get; set; }
         //public string Text { get; set; }
@@ -426,7 +427,7 @@ namespace PDfCreator.Models
             _path = path;
             byte[] imageBytes = System.IO.File.ReadAllBytes(path);
             string base64String = Convert.ToBase64String(imageBytes);
-            _imageString= base64String;
+            _imageString = base64String;
         }
         public void LoadImage(string image)
         {
@@ -434,8 +435,69 @@ namespace PDfCreator.Models
         }
         public byte[] GetImage()
         {
-            byte[] img= Convert.FromBase64String(ImageString);
+            byte[] img = Convert.FromBase64String(ImageString);
             return img;
+        }
+    }
+
+    public interface IDlgParameter
+    {
+
+
+        string name { get; set; }
+         string label { get; set; }
+        
+         string value { get; set; }
+         bool? disabled { get; set; }
+         bool? noSearch { get; set; }
+         string width { get; set; }
+         List<KeyValuePair<string, object>> options { get; set; }
+         string optionQuery { get; set; }
+         string placeholder { get; set; }
+         string inputid { get; set; }
+         string cssClass { get; set; }
+       
+
+    }
+    public class DlgParameter:IDlgParameter
+    {
+        private string _type;
+        public string name { get; set; }
+        public string label { get; set; }
+        public string type { get; set; }
+        public string value { get; set; }
+        public bool? disabled { get; set; }
+        public bool? noSearch { get; set; }
+        public string width { get; set; }
+        public List<KeyValuePair<string, object>> options { get; set; } = new List<KeyValuePair<string, object>>();
+        public string optionQuery { get; set; }
+        public string placeholder { get; set; }
+        public string inputid { get; set; }
+        public string cssClass { get; set; }
+        
+    }
+
+    public class DlgParameterControl : IDlgParameter
+    {
+        private string _type;
+        public string name { get; set; }
+        public string label { get; set; }
+        public string value { get; set; }
+        public bool? disabled { get; set; }
+        public bool? noSearch { get; set; }
+        public string width { get; set; }
+        public List<KeyValuePair<string, object>> options { get; set; } = new List<KeyValuePair<string, object>>();
+        public string optionQuery { get; set; }
+        public string placeholder { get; set; }
+        public string inputid { get; set; }
+        public string cssClass { get; set; }
+        private ControlTypeEnum ctype = 0;
+        public ControlTypeEnum controlType { get { return ctype; } set { ctype = value; getControlTypeString(); } }
+        
+        public string getControlTypeString()
+        {
+            _type = Enum.GetName(typeof(ControlTypeEnum), this.controlType);
+            return _type;
         }
     }
     public enum iTextAlignment
@@ -448,9 +510,9 @@ namespace PDfCreator.Models
     }
     public enum iSystemValues
     {
-        Nothing=0,
-        Date=1,
-        Time=2
+        Nothing = 0,
+        Date = 1,
+        Time = 2
     }
     public enum iHorizontalAlignment
     {
@@ -472,7 +534,7 @@ namespace PDfCreator.Models
     public enum iFonts
     {
         HELVETICA, HELVETICA_BOLD, TIMES_ROMAN, COURIER, COURIER_BOLD, COURIER_BOLDOBLIQUE,
-        TIMES_BOLDITALIC, TIMES_ITALIC, SYMBOL
+        TIMES_BOLDITALIC, TIMES_ITALIC, SYMBOL,CUSTOM
     }
     public enum iColumnArrayUnit
     {
@@ -490,13 +552,21 @@ namespace PDfCreator.Models
 
     public enum iPageNumPosition
     {
-        NoPageNumber=0,
-        BottomLeft=1,
-        BottomRight=2,
-        BottomCenter=3,
-        TopLeft=4,
-        TopRight=5,
-        TopCenter=6
+        NoPageNumber = 0,
+        BottomLeft = 1,
+        BottomRight = 2,
+        BottomCenter = 3,
+        TopLeft = 4,
+        TopRight = 5,
+        TopCenter = 6
 
+    }
+    public enum ControlTypeEnum
+    {
+        TextBox,
+        DatePicker,
+        DropDown,
+        CheckBox,
+        OptionButton
     }
 }

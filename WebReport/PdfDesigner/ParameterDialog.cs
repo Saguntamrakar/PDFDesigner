@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PDfCreator.Models;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -12,8 +13,10 @@ namespace PdfDesigner
 {
     public partial class ParameterDialog : Form
     {
-        private string[] param; 
+        private string[] param;
         public string jsonParam { get; set; }
+        public Dictionary<string,object> DictParam { get; set; }
+        public List<DlgParameter> DialogParamList { get; set; } = new List<DlgParameter>();
         public ParameterDialog()
         {
             InitializeComponent();
@@ -38,8 +41,22 @@ namespace PdfDesigner
                 TextBox tbx = new TextBox();
                 tbx.Name = p;
                 tbx.Location = new Point(pointX + 100, pointY);
+                //ComboBox cmb = new ComboBox();
+                //cmb.Items.Add("String");cmb.Items.Add("Date");
+                //var cmbValue = DialogParamList.Find(x => x.name == p);
+                //if(cmbValue != null)
+                //{
+                //    cmb.SelectedItem = cmbValue.type;
+                //}
+                //else
+                //{
+                //    cmb.SelectedValue = "String";
+                //}
+                //cmb.Location = new Point(tbx.Location.X + 100, pointY);
+                //cmb.Name = p + "_cmb";
                 panel1.Controls.Add(lbl);
                 panel1.Controls.Add(tbx);
+                //panel1.Controls.Add(cmb);
                 pointX = 30;
                 pointY = pointY + 20;
                 try
@@ -64,6 +81,9 @@ namespace PdfDesigner
         private void btnOk_Click(object sender, EventArgs e)
         {
             jsonParam = "{" + string.Join(",", param.Select(x => { var s = $"\"{x}\":\"{panel1.Controls[x].Text}\""; return s; })) +"}";
+            DictParam = param.Select(x =>  new KeyValuePair<string, object>(x, panel1.Controls[x].Text)).ToDictionary(x=>x.Key,x=>x.Value);
+            //var dialoglist = param.Select(x => new DlgParameter { name = x, label = x, type = panel1.Controls[x + "_cmb"].Text }).ToList();
+            //DialogParamList = dialoglist;
             this.DialogResult = DialogResult.OK;
             this.Close();
         }
